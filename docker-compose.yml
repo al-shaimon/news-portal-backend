@@ -45,8 +45,8 @@ services:
       - '80:80'
       - '443:443'
     environment:
-      DOMAIN: ${BACKEND_DOMAIN:-api.example.com}
-      EMAIL: ${CADDY_EMAIL:-admin@example.com}
+      DOMAIN: ${BACKEND_DOMAIN:-backoffice.thecontemporary.news}
+      EMAIL: ${CADDY_EMAIL:-admin@thecontemporary.news}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy-data:/data
