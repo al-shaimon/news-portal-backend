@@ -15,11 +15,11 @@ export const createCategoryValidation = [
     .isLength({ max: 100 })
     .withMessage('Name cannot exceed 100 characters'),
 
-  body('parent').optional().isMongoId().withMessage('Invalid parent category ID'),
+  body('parent').optional().isUUID().withMessage('Invalid parent category ID'),
 ];
 
 export const updateCategoryValidation = [
-  param('id').isMongoId().withMessage('Invalid category ID'),
+  param('id').isUUID().withMessage('Invalid category ID'),
 
   body('name.en')
     .optional()
@@ -33,7 +33,7 @@ export const updateCategoryValidation = [
     .isLength({ max: 100 })
     .withMessage('Name cannot exceed 100 characters'),
 
-  body('parent').optional().isMongoId().withMessage('Invalid parent category ID'),
+  body('parent').optional().isUUID().withMessage('Invalid parent category ID'),
 ];
 
 export const categoryIdValidation = [

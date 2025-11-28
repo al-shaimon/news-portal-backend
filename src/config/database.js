@@ -1,24 +1,13 @@
-import mongoose from 'mongoose';
+import { PrismaClient } from '@prisma/client';
+
+export const prisma = new PrismaClient();
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // These options are deprecated in Mongoose 6+, but included for backward compatibility
-      // Remove if using Mongoose 6+
-    });
-
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected');
-    });
+    await prisma.$connect();
+    console.log('✅ Connected to PostgreSQL via Prisma');
   } catch (error) {
-    console.error(`❌ Error connecting to MongoDB: ${error.message}`);
+    console.error('❌ Error connecting to PostgreSQL:', error);
     process.exit(1);
   }
 };

@@ -7,7 +7,7 @@ class MediaController {
   // @route   GET /api/v1/media
   // @access  Private
   getAllMedia = asyncHandler(async (req, res) => {
-    const result = await mediaService.getAllMedia(req.query, req.user._id, req.user.role);
+    const result = await mediaService.getAllMedia(req.query, req.user.id, req.user.role);
     sendPaginatedResponse(
       res,
       200,
@@ -29,7 +29,7 @@ class MediaController {
   // @route   POST /api/v1/media/upload
   // @access  Private
   uploadMedia = asyncHandler(async (req, res) => {
-    const media = await mediaService.uploadMedia(req.file, req.user._id, req.body);
+    const media = await mediaService.uploadMedia(req.file, req.user.id, req.body);
     sendResponse(res, 201, media, 'File uploaded successfully');
   });
 
@@ -37,7 +37,7 @@ class MediaController {
   // @route   POST /api/v1/media/upload/multiple
   // @access  Private
   uploadMultipleMedia = asyncHandler(async (req, res) => {
-    const media = await mediaService.uploadMultipleMedia(req.files, req.user._id, req.body);
+    const media = await mediaService.uploadMultipleMedia(req.files, req.user.id, req.body);
     sendResponse(res, 201, media, 'Files uploaded successfully');
   });
 
@@ -48,7 +48,7 @@ class MediaController {
     const media = await mediaService.updateMedia(
       req.params.id,
       req.body,
-      req.user._id,
+      req.user.id,
       req.user.role
     );
     sendResponse(res, 200, media, 'Media updated successfully');
@@ -58,7 +58,7 @@ class MediaController {
   // @route   DELETE /api/v1/media/:id
   // @access  Private
   deleteMedia = asyncHandler(async (req, res) => {
-    const result = await mediaService.deleteMedia(req.params.id, req.user._id, req.user.role);
+    const result = await mediaService.deleteMedia(req.params.id, req.user.id, req.user.role);
     sendResponse(res, 200, result, 'Media deleted successfully');
   });
 

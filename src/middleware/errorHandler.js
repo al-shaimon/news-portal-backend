@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+
 export class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -19,19 +21,12 @@ export const errorHandler = (err, req, res, next) => {
     let error = { ...err };
     error.message = err.message;
 
-    // Mongoose bad ObjectId
-    if (err.name === 'CastError') {
-      error = handleCastErrorDB(error);
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      error = handlePrismaKnownError(err);
     }
 
-    // Mongoose duplicate key
-    if (err.code === 11000) {
-      error = handleDuplicateFieldsDB(error);
-    }
-
-    // Mongoose validation error
-    if (err.name === 'ValidationError') {
-      error = handleValidationErrorDB(error);
+    if (err instanceof Prisma.PrismaClientValidationError) {
+      error = handlePrismaValidationError(err);
     }
 
     // JWT errors
@@ -76,21 +71,22 @@ const sendErrorProd = (err, res) => {
   }
 };
 
-const handleCastErrorDB = (err) => {
-  const message = `Invalid ${err.path}: ${err.value}`;
-  return new AppError(message, 400);
+const handlePrismaKnownError = (err) => {
+  switch (err.code) {
+    case 'P2002': {
+      const fields = err.meta?.target?.join(', ') || 'field';
+      const message = `Duplicate value for ${fields}. Please use another value.`;
+      return new AppError(message, 400);
+    }
+    case 'P2025':
+      return new AppError('Requested resource not found', 404);
+    default:
+      return new AppError('Database error occurred', 400);
+  }
 };
 
-const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg ? err.errmsg.match(/(["'])(\\?.)*?\1/)[0] : 'duplicate value';
-  const message = `Duplicate field value: ${value}. Please use another value!`;
-  return new AppError(message, 400);
-};
-
-const handleValidationErrorDB = (err) => {
-  const errors = Object.values(err.errors).map((el) => el.message);
-  const message = `Invalid input data. ${errors.join('. ')}`;
-  return new AppError(message, 400);
+const handlePrismaValidationError = () => {
+  return new AppError('Invalid data provided. Please check your input.', 400);
 };
 
 const handleJWTError = () => {

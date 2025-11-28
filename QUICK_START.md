@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js (v16 or higher)
-- MongoDB (v5 or higher)
+- PostgreSQL (v13 or higher)
 - npm or yarn
 
 ## Setup Steps
@@ -16,9 +16,9 @@ npm install
 
 ### 2. Configure Environment
 
-The `.env` file is already created with default values. Update if needed:
+Update `.env` with the correct values:
 
-- MongoDB connection string
+- `DATABASE_URL` connection string (PostgreSQL)
 - JWT secrets
 - Admin credentials
 - Frontend URL
@@ -29,15 +29,10 @@ The `.env` file is already created with default values. Update if needed:
 mkdir uploads
 ```
 
-### 4. Start MongoDB
-
-Make sure MongoDB is running on your system:
+### 4. Run Prisma Migrations
 
 ```bash
-# Windows (if installed as service)
-net start MongoDB
-
-# Or using MongoDB Compass, just ensure the connection is active
+npx prisma migrate deploy
 ```
 
 ### 5. Seed Database
@@ -108,7 +103,6 @@ backend/
 ├── src/
 │   ├── config/              # Configuration files
 │   ├── middleware/          # Express middleware
-│   ├── models/             # MongoDB models
 │   ├── modules/            # Feature modules
 │   │   ├── auth/           # Authentication
 │   │   ├── users/          # User management
@@ -120,6 +114,7 @@ backend/
 │   ├── utils/             # Utility functions
 │   ├── database/          # Seeders
 │   └── server.js          # Entry point
+├── prisma/                # Prisma schema & migrations
 └── uploads/              # Uploaded files
 ```
 
@@ -172,13 +167,13 @@ articles/
 
 ## Common Issues & Solutions
 
-### MongoDB Connection Error
+### Database Connection Error
 
 ```
-Error: connect ECONNREFUSED 127.0.0.1:27017
+Error: database error: connection refused
 ```
 
-**Solution**: Ensure MongoDB is running and the connection string in `.env` is correct.
+**Solution**: Ensure PostgreSQL is running and the `DATABASE_URL` in `.env` is correct.
 
 ### Port Already in Use
 
@@ -218,7 +213,7 @@ Before deploying:
 
 1. Change all secrets in `.env`
 2. Set `NODE_ENV=production`
-3. Use production MongoDB (MongoDB Atlas)
+3. Use managed PostgreSQL (Neon, Supabase, RDS, etc.)
 4. Configure proper CORS settings
 5. Set up proper file storage (AWS S3, Cloudinary)
 6. Enable HTTPS

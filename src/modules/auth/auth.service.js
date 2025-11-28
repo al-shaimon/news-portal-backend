@@ -1,43 +1,56 @@
-import User from '../../models/User.model.js';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { generateToken, generateRefreshToken, verifyRefreshToken } from '../../utils/tokenUtils.js';
-import { asyncHandler } from '../../utils/asyncHandler.js';
+import { USER_ROLES } from '../../config/constants.js';
 
 class AuthService {
+  sanitizeUser(user) {
+    if (!user) return null;
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      phone: user.phone,
+      bio: user.bio,
+      isActive: user.isActive,
+      isEmailVerified: user.isEmailVerified,
+      lastLogin: user.lastLogin,
+      createdAt: user.createdAt,
+    };
+  }
+
   // Register new user
   async register(userData) {
     const { email, password, name, role } = userData;
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new AppError('Email already registered', 400);
     }
 
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: role || 'reader',
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: role || USER_ROLES.READER,
+      },
     });
 
-    // Generate tokens
-    const accessToken = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    const accessToken = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
 
-    // Save refresh token
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
 
     return {
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-      },
+      user: this.sanitizeUser(user),
       accessToken,
       refreshToken,
     };
@@ -45,47 +58,37 @@ class AuthService {
 
   // Login user
   async login(email, password) {
-    // Check if email and password exist
     if (!email || !password) {
       throw new AppError('Please provide email and password', 400);
     }
 
-    // Find user and include password
-    const user = await User.findOne({ email }).select('+password');
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new AppError('Invalid email or password', 401);
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new AppError('Your account has been deactivated', 401);
     }
 
-    // Check if password is correct
-    const isPasswordCorrect = await user.comparePassword(password);
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
       throw new AppError('Invalid email or password', 401);
     }
 
-    // Update last login
-    user.lastLogin = new Date();
+    const accessToken = generateToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
 
-    // Generate tokens
-    const accessToken = generateToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
-
-    // Save refresh token
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        refreshToken,
+        lastLogin: new Date(),
+      },
+    });
 
     return {
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-      },
+      user: this.sanitizeUser(user),
       accessToken,
       refreshToken,
     };
@@ -97,27 +100,26 @@ class AuthService {
       throw new AppError('Refresh token is required', 400);
     }
 
-    // Verify refresh token
     let decoded;
     try {
       decoded = verifyRefreshToken(refreshToken);
-    } catch (error) {
+    } catch {
       throw new AppError('Invalid or expired refresh token', 401);
     }
 
-    // Find user
-    const user = await User.findById(decoded.id).select('+refreshToken');
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+    });
+
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    // Check if refresh token matches
     if (user.refreshToken !== refreshToken) {
       throw new AppError('Invalid refresh token', 401);
     }
 
-    // Generate new access token
-    const newAccessToken = generateToken(user._id);
+    const newAccessToken = generateToken(user.id);
 
     return {
       accessToken: newAccessToken,
@@ -126,55 +128,50 @@ class AuthService {
 
   // Logout user
   async logout(userId) {
-    const user = await User.findById(userId);
-    if (!user) {
+    const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!existingUser) {
       throw new AppError('User not found', 404);
     }
 
-    // Clear refresh token
-    user.refreshToken = undefined;
-    await user.save({ validateBeforeSave: false });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
 
     return { message: 'Logged out successfully' };
   }
 
   // Get current user
   async getCurrentUser(userId) {
-    const user = await User.findById(userId);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    return {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      phone: user.phone,
-      bio: user.bio,
-      isEmailVerified: user.isEmailVerified,
-      lastLogin: user.lastLogin,
-      createdAt: user.createdAt,
-    };
+    return this.sanitizeUser(user);
   }
 
   // Change password
   async changePassword(userId, currentPassword, newPassword) {
-    const user = await User.findById(userId).select('+password');
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    // Verify current password
-    const isPasswordCorrect = await user.comparePassword(currentPassword);
+    const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordCorrect) {
       throw new AppError('Current password is incorrect', 401);
     }
 
-    // Update password
-    user.password = newPassword;
-    await user.save();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
 
     return { message: 'Password changed successfully' };
   }
@@ -190,24 +187,16 @@ class AuthService {
       }
     });
 
-    const user = await User.findByIdAndUpdate(userId, filteredUpdates, {
-      new: true,
-      runValidators: true,
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: filteredUpdates,
     });
 
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    return {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      phone: user.phone,
-      bio: user.bio,
-    };
+    return this.sanitizeUser(user);
   }
 }
 

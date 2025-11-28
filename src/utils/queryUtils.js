@@ -1,9 +1,9 @@
 import { PAGINATION } from '../config/constants.js';
 
-export const getPaginationParams = (req) => {
-  const page = Math.max(1, parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE);
+export const getPaginationParams = (query = {}) => {
+  const page = Math.max(1, parseInt(query.page, 10) || PAGINATION.DEFAULT_PAGE);
   const limit = Math.min(
-    parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT,
+    parseInt(query.limit, 10) || PAGINATION.DEFAULT_LIMIT,
     PAGINATION.MAX_LIMIT
   );
   const skip = (page - 1) * limit;
@@ -11,21 +11,16 @@ export const getPaginationParams = (req) => {
   return { page, limit, skip };
 };
 
-export const buildSortObject = (sortQuery) => {
-  if (!sortQuery) return { createdAt: -1 };
+export const buildSortObject = (sortQuery, defaultField = 'createdAt') => {
+  if (!sortQuery) return [{ [defaultField]: 'desc' }];
 
-  const sortObj = {};
   const sortFields = sortQuery.split(',');
-
-  sortFields.forEach((field) => {
+  return sortFields.map((field) => {
     if (field.startsWith('-')) {
-      sortObj[field.substring(1)] = -1;
-    } else {
-      sortObj[field] = 1;
+      return { [field.substring(1)]: 'desc' };
     }
+    return { [field]: 'asc' };
   });
-
-  return sortObj;
 };
 
 export const buildFilterObject = (query, allowedFields = []) => {

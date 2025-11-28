@@ -1,92 +1,144 @@
-import User from '../../models/User.model.js';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { getPaginationParams, buildSortObject } from '../../utils/queryUtils.js';
 
 class UserService {
+  sanitizeUser(user) {
+    if (!user) return null;
+    const { password, refreshToken, ...rest } = user;
+    return rest;
+  }
+
+  mapUserWithArticles(user) {
+    if (!user) return null;
+    const sanitized = this.sanitizeUser(user);
+
+    if (user.articles) {
+      sanitized.articles = user.articles.map((article) => ({
+        id: article.id,
+        title: {
+          en: article.titleEn,
+          bn: article.titleBn,
+        },
+        slug: article.slug,
+        status: article.status,
+        publishedAt: article.publishedAt,
+      }));
+    }
+
+    return sanitized;
+  }
+
   // Get all users with pagination and filters
   async getAllUsers(query) {
     const { page, limit, skip } = getPaginationParams(query);
-    const sort = buildSortObject(query.sort || '-createdAt');
+    const orderBy = buildSortObject(query.sort || '-createdAt');
 
-    // Build filter
-    const filter = {};
-    if (query.role) filter.role = query.role;
-    if (query.isActive !== undefined) filter.isActive = query.isActive === 'true';
+    const where = {};
+
+    if (query.role) {
+      where.role = query.role;
+    }
+
+    if (query.isActive !== undefined) {
+      where.isActive = query.isActive === 'true';
+    }
+
     if (query.search) {
-      filter.$or = [
-        { name: { $regex: query.search, $options: 'i' } },
-        { email: { $regex: query.search, $options: 'i' } },
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
     const [users, total] = await Promise.all([
-      User.find(filter).select('-password -refreshToken').sort(sort).skip(skip).limit(limit).lean(),
-      User.countDocuments(filter),
+      prisma.user.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
     ]);
 
     return {
-      users,
+      users: users.map((user) => this.sanitizeUser(user)),
       pagination: { page, limit, total },
     };
   }
 
   // Get user by ID
   async getUserById(userId) {
-    const user = await User.findById(userId)
-      .select('-password -refreshToken')
-      .populate('articles')
-      .lean();
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        articles: {
+          select: {
+            id: true,
+            titleEn: true,
+            titleBn: true,
+            slug: true,
+            status: true,
+            publishedAt: true,
+          },
+        },
+      },
+    });
 
     if (!user) {
       throw new AppError('User not found', 404);
     }
 
-    return user;
+    return this.mapUserWithArticles(user);
   }
 
   // Create new user (Admin only)
   async createUser(userData) {
-    const { email } = userData;
+    const { email, password } = userData;
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new AppError('Email already exists', 400);
     }
 
-    const user = await User.create(userData);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    return {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-    };
+    const user = await prisma.user.create({
+      data: {
+        ...userData,
+        password: hashedPassword,
+      },
+    });
+
+    return this.sanitizeUser(user);
   }
 
   // Update user
   async updateUser(userId, updates) {
-    // Don't allow password update through this method
     delete updates.password;
     delete updates.refreshToken;
 
-    const user = await User.findByIdAndUpdate(userId, updates, {
-      new: true,
-      runValidators: true,
-    }).select('-password -refreshToken');
+    try {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: updates,
+      });
 
-    if (!user) {
+      return this.sanitizeUser(user);
+    } catch (error) {
       throw new AppError('User not found', 404);
     }
-
-    return user;
   }
 
   // Delete user (soft delete)
   async deleteUser(userId) {
-    const user = await User.findByIdAndUpdate(userId, { isActive: false }, { new: true });
-
-    if (!user) {
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isActive: false },
+      });
+    } catch (error) {
       throw new AppError('User not found', 404);
     }
 
@@ -95,9 +147,9 @@ class UserService {
 
   // Permanently delete user
   async permanentlyDeleteUser(userId) {
-    const user = await User.findByIdAndDelete(userId);
-
-    if (!user) {
+    try {
+      await prisma.user.delete({ where: { id: userId } });
+    } catch (error) {
       throw new AppError('User not found', 404);
     }
 
@@ -106,24 +158,24 @@ class UserService {
 
   // Get user statistics
   async getUserStats() {
-    const stats = await User.aggregate([
-      {
-        $group: {
-          _id: '$role',
-          count: { $sum: 1 },
-        },
-      },
+    const [totalUsers, activeUsers, inactiveUsers, byRole] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
+      prisma.user.count({ where: { isActive: false } }),
+      prisma.user.groupBy({
+        by: ['role'],
+        _count: { role: true },
+      }),
     ]);
-
-    const totalUsers = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ isActive: true });
-    const inactiveUsers = await User.countDocuments({ isActive: false });
 
     return {
       totalUsers,
       activeUsers,
       inactiveUsers,
-      byRole: stats,
+      byRole: byRole.map((entry) => ({
+        role: entry.role,
+        count: entry._count.role,
+      })),
     };
   }
 }

@@ -361,7 +361,7 @@ API requests are limited to 100 requests per 15 minutes per IP address.
 ## Notes
 
 1. All dates should be in ISO 8601 format
-2. All IDs are MongoDB ObjectIDs
+2. All IDs are UUID strings
 3. Slugs are automatically generated from English titles
 4. File uploads support images (jpg, png, webp), videos (mp4), and documents (pdf)
 5. Maximum file size: 5MB for images, 50MB for videos

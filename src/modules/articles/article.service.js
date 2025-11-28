@@ -1,286 +1,495 @@
-import Article from '../../models/Article.model.js';
+import { prisma } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { getPaginationParams, buildSortObject } from '../../utils/queryUtils.js';
 import { createSlug, createUniqueSlug } from '../../utils/slugUtils.js';
-import { ARTICLE_STATUS } from '../../config/constants.js';
+import { ARTICLE_STATUS, USER_ROLES } from '../../config/constants.js';
+
+const isUUID = (value = '') =>
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
+    value
+  );
+
+const calculateReadTime = (content = '') => {
+  if (!content) return 0;
+  const wordsPerMinute = 200;
+  const wordCount = content.split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+};
 
 class ArticleService {
+  mapArticle(article) {
+    if (!article) return null;
+
+    return {
+      id: article.id,
+      title: {
+        en: article.titleEn,
+        bn: article.titleBn,
+      },
+      slug: article.slug,
+      excerpt: {
+        en: article.excerptEn,
+        bn: article.excerptBn,
+      },
+      content: {
+        en: article.contentEn,
+        bn: article.contentBn,
+      },
+      featuredImage: article.featuredImage,
+      gallery: article.gallery,
+      tags: article.tags,
+      category: article.category
+        ? {
+            id: article.category.id,
+            name: {
+              en: article.category.nameEn,
+              bn: article.category.nameBn,
+            },
+            slug: article.category.slug,
+          }
+        : null,
+      author: article.author
+        ? {
+            id: article.author.id,
+            name: article.author.name,
+            email: article.author.email,
+            avatar: article.author.avatar,
+            bio: article.author.bio,
+          }
+        : null,
+      status: article.status,
+      publishedAt: article.publishedAt,
+      scheduledAt: article.scheduledAt,
+      isFeatured: article.isFeatured,
+      isBreaking: article.isBreaking,
+      isTrending: article.isTrending,
+      views: article.views,
+      likes: article.likes,
+      shares: article.shares,
+      readTime: article.readTime,
+      metaTitle: {
+        en: article.metaTitleEn,
+        bn: article.metaTitleBn,
+      },
+      metaDescription: {
+        en: article.metaDescriptionEn,
+        bn: article.metaDescriptionBn,
+      },
+      metaKeywords: article.metaKeywords,
+      allowComments: article.allowComments,
+      relatedArticles: article.relatedArticles
+        ? article.relatedArticles.map((related) => ({
+            id: related.id,
+            title: {
+              en: related.titleEn,
+              bn: related.titleBn,
+            },
+            slug: related.slug,
+            featuredImage: related.featuredImage,
+            publishedAt: related.publishedAt,
+          }))
+        : [],
+      createdAt: article.createdAt,
+      updatedAt: article.updatedAt,
+    };
+  }
+
+  buildArticleData(articleData, authorId = null) {
+    const data = {
+      titleEn: articleData.title?.en,
+      titleBn: articleData.title?.bn,
+      excerptEn: articleData.excerpt?.en,
+      excerptBn: articleData.excerpt?.bn,
+      contentEn: articleData.content?.en,
+      contentBn: articleData.content?.bn,
+      featuredImage: articleData.featuredImage,
+      gallery: articleData.gallery,
+      tags: articleData.tags,
+      categoryId: articleData.category,
+      status: articleData.status,
+      publishedAt: articleData.publishedAt ? new Date(articleData.publishedAt) : undefined,
+      scheduledAt: articleData.scheduledAt ? new Date(articleData.scheduledAt) : undefined,
+      isFeatured: articleData.isFeatured,
+      isBreaking: articleData.isBreaking,
+      isTrending: articleData.isTrending,
+      likes: articleData.likes,
+      shares: articleData.shares,
+      metaTitleEn: articleData.metaTitle?.en,
+      metaTitleBn: articleData.metaTitle?.bn,
+      metaDescriptionEn: articleData.metaDescription?.en,
+      metaDescriptionBn: articleData.metaDescription?.bn,
+      metaKeywords: articleData.metaKeywords,
+      allowComments: articleData.allowComments,
+    };
+
+    if (authorId) {
+      data.authorId = authorId;
+    }
+
+    if (articleData.content?.en) {
+      data.readTime = calculateReadTime(articleData.content.en);
+    }
+
+    if (articleData.status === ARTICLE_STATUS.PUBLISHED && !articleData.publishedAt) {
+      data.publishedAt = new Date();
+    }
+
+    return data;
+  }
+
   // Get all articles with filters
   async getAllArticles(query, user = null) {
     const { page, limit, skip } = getPaginationParams(query);
-    const sort = buildSortObject(query.sort || '-publishedAt');
+    const orderBy = buildSortObject(query.sort || '-publishedAt');
 
-    // Build filter
-    const filter = {};
+    const where = {};
 
-    // For public API, only show published articles
-    if (!user || !['admin', 'super_admin'].includes(user.role)) {
-      filter.status = ARTICLE_STATUS.PUBLISHED;
-      filter.publishedAt = { $lte: new Date() };
-    } else {
-      // Admins can filter by status
-      if (query.status) filter.status = query.status;
+    if (!user || ![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
+      where.status = ARTICLE_STATUS.PUBLISHED;
+      where.publishedAt = { lte: new Date() };
+    } else if (query.status) {
+      where.status = query.status;
     }
 
-    if (query.category) filter.category = query.category;
-    if (query.author) filter.author = query.author;
-    if (query.isFeatured !== undefined) filter.isFeatured = query.isFeatured === 'true';
-    if (query.isBreaking !== undefined) filter.isBreaking = query.isBreaking === 'true';
-    if (query.isTrending !== undefined) filter.isTrending = query.isTrending === 'true';
+    if (query.category) where.categoryId = query.category;
+    if (query.author) where.authorId = query.author;
+    if (query.isFeatured !== undefined) where.isFeatured = query.isFeatured === 'true';
+    if (query.isBreaking !== undefined) where.isBreaking = query.isBreaking === 'true';
+    if (query.isTrending !== undefined) where.isTrending = query.isTrending === 'true';
 
-    // Search
     if (query.search) {
-      filter.$text = { $search: query.search };
+      where.OR = [
+        { titleEn: { contains: query.search, mode: 'insensitive' } },
+        { titleBn: { contains: query.search, mode: 'insensitive' } },
+        { contentEn: { contains: query.search, mode: 'insensitive' } },
+        { contentBn: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
 
-    // Date range
     if (query.startDate || query.endDate) {
-      filter.publishedAt = {};
-      if (query.startDate) filter.publishedAt.$gte = new Date(query.startDate);
-      if (query.endDate) filter.publishedAt.$lte = new Date(query.endDate);
+      where.publishedAt = {};
+      if (query.startDate) where.publishedAt.gte = new Date(query.startDate);
+      if (query.endDate) where.publishedAt.lte = new Date(query.endDate);
     }
 
     const [articles, total] = await Promise.all([
-      Article.find(filter)
-        .populate('category', 'name slug')
-        .populate('author', 'name email avatar')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Article.countDocuments(filter),
+      prisma.article.findMany({
+        where,
+        include: {
+          category: true,
+          author: true,
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.article.count({ where }),
     ]);
 
     return {
-      articles,
+      articles: articles.map((article) => this.mapArticle(article)),
       pagination: { page, limit, total },
     };
   }
 
   // Get article by ID or slug
   async getArticle(identifier, incrementView = false) {
-    const filter = identifier.match(/^[0-9a-fA-F]{24}$/)
-      ? { _id: identifier }
+    const filter = isUUID(identifier)
+      ? { id: identifier }
       : { slug: identifier, status: ARTICLE_STATUS.PUBLISHED };
 
-    const article = await Article.findOne(filter)
-      .populate('category', 'name slug')
-      .populate('author', 'name email avatar bio')
-      .populate('relatedArticles', 'title slug featuredImage publishedAt')
-      .lean();
+    const article = await prisma.article.findFirst({
+      where: filter,
+      include: {
+        category: true,
+        author: true,
+        relatedArticles: {
+          where: { status: ARTICLE_STATUS.PUBLISHED },
+        },
+      },
+    });
 
     if (!article) {
       throw new AppError('Article not found', 404);
     }
 
-    // Increment view count
     if (incrementView) {
-      await Article.findByIdAndUpdate(article._id, { $inc: { views: 1 } });
+      await prisma.article.update({
+        where: { id: article.id },
+        data: { views: { increment: 1 } },
+      });
       article.views += 1;
     }
 
-    return article;
+    return this.mapArticle(article);
   }
 
   // Create article
   async createArticle(articleData, authorId) {
-    // Generate slug from English title
     const baseSlug = createSlug(articleData.title.en);
-    const slug = await createUniqueSlug(Article, baseSlug);
+    const slug = await createUniqueSlug('article', baseSlug);
+    const data = this.buildArticleData(articleData, authorId);
 
-    const article = await Article.create({
-      ...articleData,
-      slug,
-      author: authorId,
+    const article = await prisma.article.create({
+      data: {
+        ...data,
+        slug,
+        metaKeywords: articleData.metaKeywords || [],
+        relatedArticles: articleData.relatedArticles?.length
+          ? {
+              connect: articleData.relatedArticles.map((id) => ({ id })),
+            }
+          : undefined,
+      },
+      include: {
+        category: true,
+        author: true,
+        relatedArticles: true,
+      },
     });
 
-    return article;
+    return this.mapArticle(article);
   }
 
   // Update article
   async updateArticle(articleId, updates, userId, userRole) {
-    const article = await Article.findById(articleId);
+    const article = await prisma.article.findUnique({
+      where: { id: articleId },
+      include: { author: true },
+    });
 
     if (!article) {
       throw new AppError('Article not found', 404);
     }
 
-    // Check permissions
     if (
-      !['admin', 'super_admin'].includes(userRole) &&
-      article.author.toString() !== userId.toString()
+      ![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(userRole) &&
+      article.authorId !== userId
     ) {
       throw new AppError('You do not have permission to update this article', 403);
     }
 
-    // Update slug if title changed
-    if (updates.title && updates.title.en && updates.title.en !== article.title.en) {
+    const data = this.buildArticleData(updates);
+
+    if (updates.title?.en && updates.title.en !== article.titleEn) {
       const baseSlug = createSlug(updates.title.en);
-      updates.slug = await createUniqueSlug(Article, baseSlug, articleId);
+      data.slug = await createUniqueSlug('article', baseSlug, articleId);
     }
 
-    // Set published date if status changed to published
-    if (updates.status === ARTICLE_STATUS.PUBLISHED && !article.publishedAt) {
-      updates.publishedAt = new Date();
+    if (
+      updates.status === ARTICLE_STATUS.PUBLISHED &&
+      article.status !== ARTICLE_STATUS.PUBLISHED &&
+      !article.publishedAt
+    ) {
+      data.publishedAt = new Date();
     }
 
-    Object.assign(article, updates);
-    await article.save();
+    if (updates.relatedArticles) {
+      data.relatedArticles = {
+        set: updates.relatedArticles.map((id) => ({ id })),
+      };
+    }
 
-    return article;
+    const updatedArticle = await prisma.article.update({
+      where: { id: articleId },
+      data: {
+        ...data,
+        metaKeywords: updates.metaKeywords || article.metaKeywords,
+      },
+      include: {
+        category: true,
+        author: true,
+        relatedArticles: true,
+      },
+    });
+
+    return this.mapArticle(updatedArticle);
   }
 
   // Delete article
   async deleteArticle(articleId, userId, userRole) {
-    const article = await Article.findById(articleId);
+    const article = await prisma.article.findUnique({ where: { id: articleId } });
 
     if (!article) {
       throw new AppError('Article not found', 404);
     }
 
-    // Check permissions
     if (
-      !['admin', 'super_admin'].includes(userRole) &&
-      article.author.toString() !== userId.toString()
+      ![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(userRole) &&
+      article.authorId !== userId
     ) {
       throw new AppError('You do not have permission to delete this article', 403);
     }
 
-    await Article.findByIdAndDelete(articleId);
+    await prisma.article.delete({ where: { id: articleId } });
 
     return { message: 'Article deleted successfully' };
   }
 
-  // Get featured articles
   async getFeaturedArticles(limit = 5) {
-    const articles = await Article.find({
-      status: ARTICLE_STATUS.PUBLISHED,
-      isFeatured: true,
-      publishedAt: { $lte: new Date() },
-    })
-      .populate('category', 'name slug')
-      .populate('author', 'name avatar')
-      .sort('-publishedAt')
-      .limit(limit)
-      .lean();
+    const articles = await prisma.article.findMany({
+      where: {
+        status: ARTICLE_STATUS.PUBLISHED,
+        isFeatured: true,
+        publishedAt: { lte: new Date() },
+      },
+      include: {
+        category: true,
+        author: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+    });
 
-    return articles;
+    return articles.map((article) => this.mapArticle(article));
   }
 
-  // Get breaking news
   async getBreakingNews() {
-    const articles = await Article.find({
-      status: ARTICLE_STATUS.PUBLISHED,
-      isBreaking: true,
-      publishedAt: { $lte: new Date() },
-    })
-      .populate('category', 'name slug')
-      .sort('-publishedAt')
-      .limit(3)
-      .lean();
+    const articles = await prisma.article.findMany({
+      where: {
+        status: ARTICLE_STATUS.PUBLISHED,
+        isBreaking: true,
+        publishedAt: { lte: new Date() },
+      },
+      include: { category: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 3,
+    });
 
-    return articles;
+    return articles.map((article) => this.mapArticle(article));
   }
 
-  // Get trending articles
   async getTrendingArticles(limit = 10) {
-    const articles = await Article.find({
-      status: ARTICLE_STATUS.PUBLISHED,
-      isTrending: true,
-      publishedAt: { $lte: new Date() },
-    })
-      .populate('category', 'name slug')
-      .populate('author', 'name avatar')
-      .sort('-views')
-      .limit(limit)
-      .lean();
+    const articles = await prisma.article.findMany({
+      where: {
+        status: ARTICLE_STATUS.PUBLISHED,
+        isTrending: true,
+        publishedAt: { lte: new Date() },
+      },
+      include: {
+        category: true,
+        author: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+      orderBy: { views: 'desc' },
+      take: limit,
+    });
 
-    return articles;
+    return articles.map((article) => this.mapArticle(article));
   }
 
-  // Get latest articles
   async getLatestArticles(limit = 10) {
-    const articles = await Article.find({
-      status: ARTICLE_STATUS.PUBLISHED,
-      publishedAt: { $lte: new Date() },
-    })
-      .populate('category', 'name slug')
-      .populate('author', 'name avatar')
-      .sort('-publishedAt')
-      .limit(limit)
-      .lean();
+    const articles = await prisma.article.findMany({
+      where: {
+        status: ARTICLE_STATUS.PUBLISHED,
+        publishedAt: { lte: new Date() },
+      },
+      include: {
+        category: true,
+        author: {
+          select: { id: true, name: true, avatar: true },
+        },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+    });
 
-    return articles;
+    return articles.map((article) => this.mapArticle(article));
   }
 
-  // Get related articles
   async getRelatedArticles(articleId, categoryId, limit = 5) {
-    const articles = await Article.find({
-      _id: { $ne: articleId },
-      category: categoryId,
-      status: ARTICLE_STATUS.PUBLISHED,
-      publishedAt: { $lte: new Date() },
-    })
-      .populate('category', 'name slug')
-      .sort('-publishedAt')
-      .limit(limit)
-      .lean();
+    const articles = await prisma.article.findMany({
+      where: {
+        id: { not: articleId },
+        categoryId,
+        status: ARTICLE_STATUS.PUBLISHED,
+        publishedAt: { lte: new Date() },
+      },
+      include: { category: true },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+    });
 
-    return articles;
+    return articles.map((article) => this.mapArticle(article));
   }
 
-  // Search articles
   async searchArticles(searchQuery, options = {}) {
     const { page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    const filter = {
+    const where = {
       status: ARTICLE_STATUS.PUBLISHED,
-      publishedAt: { $lte: new Date() },
-      $text: { $search: searchQuery },
+      publishedAt: { lte: new Date() },
+      OR: [
+        { titleEn: { contains: searchQuery, mode: 'insensitive' } },
+        { titleBn: { contains: searchQuery, mode: 'insensitive' } },
+        { contentEn: { contains: searchQuery, mode: 'insensitive' } },
+        { contentBn: { contains: searchQuery, mode: 'insensitive' } },
+      ],
     };
 
     const [articles, total] = await Promise.all([
-      Article.find(filter, { score: { $meta: 'textScore' } })
-        .populate('category', 'name slug')
-        .populate('author', 'name avatar')
-        .sort({ score: { $meta: 'textScore' } })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Article.countDocuments(filter),
+      prisma.article.findMany({
+        where,
+        include: {
+          category: true,
+          author: {
+            select: { id: true, name: true, avatar: true },
+          },
+        },
+        orderBy: [{ publishedAt: 'desc' }],
+        skip,
+        take: Number(limit),
+      }),
+      prisma.article.count({ where }),
     ]);
 
     return {
-      articles,
-      pagination: { page, limit, total },
+      articles: articles.map((article) => this.mapArticle(article)),
+      pagination: { page: Number(page), limit: Number(limit), total },
     };
   }
 
-  // Get article statistics
   async getArticleStats() {
-    const totalArticles = await Article.countDocuments();
-    const publishedArticles = await Article.countDocuments({ status: ARTICLE_STATUS.PUBLISHED });
-    const draftArticles = await Article.countDocuments({ status: ARTICLE_STATUS.DRAFT });
-    const archivedArticles = await Article.countDocuments({ status: ARTICLE_STATUS.ARCHIVED });
+    const [totalArticles, publishedArticles, draftArticles, archivedArticles, totalViews] =
+      await Promise.all([
+        prisma.article.count(),
+        prisma.article.count({ where: { status: ARTICLE_STATUS.PUBLISHED } }),
+        prisma.article.count({ where: { status: ARTICLE_STATUS.DRAFT } }),
+        prisma.article.count({ where: { status: ARTICLE_STATUS.ARCHIVED } }),
+        prisma.article.aggregate({
+          _sum: { views: true },
+        }),
+      ]);
 
-    const totalViews = await Article.aggregate([
-      { $group: { _id: null, total: { $sum: '$views' } } },
-    ]);
-
-    const topArticles = await Article.find({ status: ARTICLE_STATUS.PUBLISHED })
-      .sort('-views')
-      .limit(10)
-      .select('title slug views')
-      .lean();
+    const topArticles = await prisma.article.findMany({
+      where: { status: ARTICLE_STATUS.PUBLISHED },
+      orderBy: { views: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        titleEn: true,
+        titleBn: true,
+        slug: true,
+        views: true,
+      },
+    });
 
     return {
       totalArticles,
       publishedArticles,
       draftArticles,
       archivedArticles,
-      totalViews: totalViews[0]?.total || 0,
-      topArticles,
+      totalViews: totalViews._sum.views || 0,
+      topArticles: topArticles.map((article) => ({
+        id: article.id,
+        title: { en: article.titleEn, bn: article.titleBn },
+        slug: article.slug,
+        views: article.views,
+      })),
     };
   }
 }

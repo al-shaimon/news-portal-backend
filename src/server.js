@@ -28,8 +28,8 @@ dotenv.config();
 // Initialize express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Connect to database
+await connectDB();
 
 // Security Middleware
 app.use(helmet()); // Set security HTTP headers

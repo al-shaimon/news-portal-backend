@@ -29,7 +29,7 @@ class ArticleController {
   // @route   POST /api/v1/articles
   // @access  Private (Admin, Journalist)
   createArticle = asyncHandler(async (req, res) => {
-    const article = await articleService.createArticle(req.body, req.user._id);
+    const article = await articleService.createArticle(req.body, req.user.id);
     sendResponse(res, 201, article, 'Article created successfully');
   });
 
@@ -40,7 +40,7 @@ class ArticleController {
     const article = await articleService.updateArticle(
       req.params.id,
       req.body,
-      req.user._id,
+      req.user.id,
       req.user.role
     );
     sendResponse(res, 200, article, 'Article updated successfully');
@@ -50,7 +50,7 @@ class ArticleController {
   // @route   DELETE /api/v1/articles/:id
   // @access  Private (Admin, Owner)
   deleteArticle = asyncHandler(async (req, res) => {
-    const result = await articleService.deleteArticle(req.params.id, req.user._id, req.user.role);
+    const result = await articleService.deleteArticle(req.params.id, req.user.id, req.user.role);
     sendResponse(res, 200, result, 'Article deleted successfully');
   });
 
@@ -95,11 +95,7 @@ class ArticleController {
   getRelatedArticles = asyncHandler(async (req, res) => {
     const article = await articleService.getArticle(req.params.id);
     const limit = parseInt(req.query.limit) || 5;
-    const articles = await articleService.getRelatedArticles(
-      article._id,
-      article.category._id,
-      limit
-    );
+    const articles = await articleService.getRelatedArticles(article.id, article.category.id, limit);
     sendResponse(res, 200, articles, 'Related articles retrieved successfully');
   });
 

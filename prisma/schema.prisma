@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  super_admin
+  admin
+  journalist
+  reader
+}
+
+enum ArticleStatus {
+  draft
+  published
+  archived
+  scheduled
+}
+
+enum AdType {
+  banner
+  sidebar
+  in_content
+  popup
+}
+
+enum AdPosition {
+  top
+  middle
+  bottom
+  sidebar_top
+  sidebar_middle
+  sidebar_bottom
+}
+
+enum MediaType {
+  image
+  video
+  document
+}
+
+model User {
+  id              String          @id @default(uuid())
+  name            String
+  email           String          @unique
+  password        String
+  role            UserRole        @default(reader)
+  avatar          String?
+  phone           String?
+  bio             String?
+  isActive        Boolean         @default(true)
+  isEmailVerified Boolean         @default(false)
+  lastLogin       DateTime?
+  refreshToken    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  articles        Article[]       @relation("ArticleAuthor")
+  media           Media[]
+}
+
+model Category {
+  id                 String                    @id @default(uuid())
+  nameEn             String
+  nameBn             String
+  slug               String                    @unique
+  descriptionEn      String?
+  descriptionBn      String?
+  parentId           String?
+  image              String?
+  order              Int                       @default(0)
+  isActive           Boolean                   @default(true)
+  showInMenu         Boolean                   @default(true)
+  metaTitleEn        String?
+  metaTitleBn        String?
+  metaDescriptionEn  String?
+  metaDescriptionBn  String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  parent             Category?                 @relation("CategoryChildren", fields: [parentId], references: [id])
+  children           Category[]                @relation("CategoryChildren")
+  articles           Article[]
+  advertisements     AdvertisementCategory[]
+}
+
+model Article {
+  id                 String           @id @default(uuid())
+  titleEn            String
+  titleBn            String
+  slug               String           @unique
+  excerptEn          String?
+  excerptBn          String?
+  contentEn          String
+  contentBn          String
+  featuredImage      Json?
+  gallery            Json?
+  tags               Json?
+  status             ArticleStatus    @default(draft)
+  publishedAt        DateTime?
+  scheduledAt        DateTime?
+  isFeatured         Boolean          @default(false)
+  isBreaking         Boolean          @default(false)
+  isTrending         Boolean          @default(false)
+  views              Int              @default(0)
+  likes              Int              @default(0)
+  shares             Int              @default(0)
+  readTime           Int              @default(0)
+  metaTitleEn        String?
+  metaTitleBn        String?
+  metaDescriptionEn  String?
+  metaDescriptionBn  String?
+  metaKeywords       String[]         @default([])
+  allowComments      Boolean          @default(true)
+  categoryId         String
+  authorId           String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  category           Category         @relation(fields: [categoryId], references: [id])
+  author             User             @relation("ArticleAuthor", fields: [authorId], references: [id])
+  relatedArticles    Article[]        @relation("RelatedArticles")
+  relatedBy          Article[]        @relation("RelatedArticles")
+}
+
+model Advertisement {
+  id             String                   @id @default(uuid())
+  name           String
+  titleEn        String?
+  titleBn        String?
+  descriptionEn  String?
+  descriptionBn  String?
+  type           AdType
+  position       AdPosition
+  image          Json
+  linkUrl        String
+  openInNewTab   Boolean                  @default(true)
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean                  @default(true)
+  priority       Int                      @default(0)
+  displayPages   String[]                 @default([])
+  impressions    Int                      @default(0)
+  clicks         Int                      @default(0)
+  client         Json?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  categories     AdvertisementCategory[]
+}
+
+model AdvertisementCategory {
+  advertisementId String
+  categoryId      String
+  advertisement   Advertisement @relation(fields: [advertisementId], references: [id])
+  category        Category      @relation(fields: [categoryId], references: [id])
+
+  @@id([advertisementId, categoryId])
+}
+
+model Media {
+  id           String     @id @default(uuid())
+  filename     String
+  originalName String
+  url          String
+  type         MediaType
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  duration     Int?
+  altEn        String?
+  altBn        String?
+  captionEn    String?
+  captionBn    String?
+  uploadedById String
+  folder       String     @default("general")
+  tags         String[]   @default([])
+  isPublic     Boolean    @default(true)
+  cloudinaryId String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id])
+}

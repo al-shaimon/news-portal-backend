@@ -23,7 +23,7 @@ export const createArticleValidation = [
   body('category')
     .notEmpty()
     .withMessage('Category is required')
-    .isMongoId()
+    .isUUID()
     .withMessage('Invalid category ID'),
 
   body('status').optional().isIn(Object.values(ARTICLE_STATUS)).withMessage('Invalid status'),
@@ -32,7 +32,7 @@ export const createArticleValidation = [
 ];
 
 export const updateArticleValidation = [
-  param('id').isMongoId().withMessage('Invalid article ID'),
+  param('id').isUUID().withMessage('Invalid article ID'),
 
   body('title.en')
     .optional()
@@ -46,11 +46,13 @@ export const updateArticleValidation = [
     .isLength({ max: 200 })
     .withMessage('Title cannot exceed 200 characters'),
 
-  body('category').optional().isMongoId().withMessage('Invalid category ID'),
+  body('category').optional().isUUID().withMessage('Invalid category ID'),
 
   body('status').optional().isIn(Object.values(ARTICLE_STATUS)).withMessage('Invalid status'),
 ];
 
-export const articleIdValidation = [
-  param('id').notEmpty().withMessage('Article ID or slug is required'),
+export const articleIdentifierValidation = [
+  param('identifier').notEmpty().withMessage('Article ID or slug is required'),
 ];
+
+export const articleIdParamValidation = [param('id').isUUID().withMessage('Invalid article ID')];

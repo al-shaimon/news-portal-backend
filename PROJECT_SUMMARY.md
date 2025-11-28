@@ -14,7 +14,7 @@ Your modular Express.js backend for the News Portal is now ready for development
 backend/
 ├── src/
 │   ├── config/              # Configuration files
-│   │   ├── database.js      # MongoDB connection
+│   │   ├── database.js      # Prisma + PostgreSQL client
 │   │   ├── constants.js     # App constants & enums
 │   │   └── multer.js        # File upload config
 │   │
@@ -24,13 +24,6 @@ backend/
 │   │   ├── validate.js      # Validation middleware
 │   │   ├── rateLimiter.js   # Rate limiting
 │   │   └── notFound.js      # 404 handler
-│   │
-│   ├── models/             # Mongoose schemas
-│   │   ├── User.model.js
-│   │   ├── Article.model.js
-│   │   ├── Category.model.js
-│   │   ├── Advertisement.model.js
-│   │   └── Media.model.js
 │   │
 │   ├── modules/            # Feature modules (MVC pattern)
 │   │   ├── auth/           # Authentication module
@@ -61,7 +54,9 @@ backend/
 │
 ├── uploads/              # File upload directory
 ├── .env                  # Environment variables
-├── .env.example         # Environment template
+├── prisma/              # Prisma schema & migrations
+│   ├── schema.prisma
+│   └── migrations/
 ├── .gitignore           # Git ignore rules
 ├── package.json         # Dependencies & scripts
 ├── README.md            # Main documentation
@@ -144,7 +139,7 @@ backend/
 - CORS protection
 - Rate limiting
 - Input validation & sanitization
-- MongoDB injection prevention
+- Prisma-powered SQL injection protection
 - XSS protection
 - Password encryption
 - JWT expiration
@@ -160,23 +155,29 @@ cd backend
 npm install
 ```
 
-### 2. Start MongoDB
+### 2. Ensure PostgreSQL Is Running
 
-Ensure MongoDB is running on your system
+Confirm your PostgreSQL instance is up (local service, Docker, etc.) and that the `DATABASE_URL` in `.env` points to a reachable database.
 
-### 3. Seed Database (Create Admin & Categories)
+### 3. Run Prisma Migrations
+
+```bash
+npx prisma migrate deploy
+```
+
+### 4. Seed Database (Create Admin & Categories)
 
 ```bash
 npm run seed
 ```
 
-### 4. Start Development Server
+### 5. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-### 5. Test the API
+### 6. Test the API
 
 ```
 http://localhost:5000/health
@@ -275,7 +276,7 @@ After running the seeder:
 
 - **Runtime**: Node.js (ES6 Modules)
 - **Framework**: Express.js
-- **Database**: MongoDB + Mongoose
+- **Database**: PostgreSQL + Prisma
 - **Authentication**: JWT + bcryptjs
 - **Validation**: express-validator
 - **File Upload**: Multer
@@ -288,7 +289,7 @@ After running the seeder:
 
 All required environment variables are in `.env`:
 
-- `MONGODB_URI` - MongoDB connection
+- `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - JWT signing key
 - `PORT` - Server port
 - `FRONTEND_URL` - CORS configuration
@@ -346,7 +347,7 @@ http://localhost:5000/api/v1
 - ✅ Input validation on all endpoints
 - ✅ Error handling with custom errors
 - ✅ Async/await with try-catch
-- ✅ MongoDB indexes for performance
+- ✅ Prisma-defined indexes for performance
 - ✅ Pagination support
 - ✅ Search functionality
 - ✅ RESTful API design
@@ -377,7 +378,7 @@ http://localhost:5000/api/v1
 
 ### Production Tasks:
 
-1. Use production MongoDB (MongoDB Atlas)
+1. Use managed PostgreSQL (Neon, Supabase, RDS, etc.)
 2. Change all secrets in `.env`
 3. Set up CI/CD pipeline
 4. Configure domain and SSL
@@ -390,8 +391,8 @@ http://localhost:5000/api/v1
 ## 🎓 Learning Resources
 
 - Express.js: https://expressjs.com/
-- MongoDB: https://docs.mongodb.com/
-- Mongoose: https://mongoosejs.com/
+- PostgreSQL: https://www.postgresql.org/docs/
+- Prisma: https://www.prisma.io/docs
 - JWT: https://jwt.io/
 - REST API: https://restfulapi.net/
 
@@ -399,12 +400,13 @@ http://localhost:5000/api/v1
 
 ## 🐛 Troubleshooting
 
-### MongoDB Connection Error
+### Database Connection Error
 
 ```bash
-# Check MongoDB status
-# Windows: net start MongoDB
-# Or check if running in Task Manager
+# Check PostgreSQL status
+# macOS (Homebrew): brew services start postgresql
+# Ubuntu: sudo systemctl start postgresql
+# Windows (Service): net start postgresql-x64-14
 ```
 
 ### Port Already in Use
@@ -429,7 +431,7 @@ For questions or issues:
 1. Check API_DOCUMENTATION.md
 2. Check QUICK_START.md
 3. Review error messages in console
-4. Check MongoDB connection
+4. Check PostgreSQL connection
 
 ---
 

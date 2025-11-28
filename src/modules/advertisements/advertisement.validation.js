@@ -47,11 +47,11 @@ export const createAdvertisementValidation = [
 ];
 
 export const updateAdvertisementValidation = [
-  param('id').isMongoId().withMessage('Invalid advertisement ID'),
+  param('id').isUUID().withMessage('Invalid advertisement ID'),
 
   body('type').optional().isIn(Object.values(AD_TYPES)).withMessage('Invalid advertisement type'),
 
   body('position').optional().isIn(Object.values(AD_POSITIONS)).withMessage('Invalid position'),
 ];
 
-export const adIdValidation = [param('id').isMongoId().withMessage('Invalid advertisement ID')];
+export const adIdValidation = [param('id').isUUID().withMessage('Invalid advertisement ID')];

@@ -1,63 +1,140 @@
-import Media from '../../models/Media.model.js';
-import { AppError } from '../../middleware/errorHandler.js';
-import { getPaginationParams, buildSortObject } from '../../utils/queryUtils.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { prisma } from '../../config/database.js';
+import { AppError } from '../../middleware/errorHandler.js';
+import { getPaginationParams, buildSortObject } from '../../utils/queryUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 class MediaService {
+  mapMedia(media) {
+    if (!media) return null;
+
+    return {
+      id: media.id,
+      filename: media.filename,
+      originalName: media.originalName,
+      url: media.url,
+      type: media.type,
+      mimeType: media.mimeType,
+      size: media.size,
+      width: media.width,
+      height: media.height,
+      duration: media.duration,
+      alt: {
+        en: media.altEn,
+        bn: media.altBn,
+      },
+      caption: {
+        en: media.captionEn,
+        bn: media.captionBn,
+      },
+      uploadedBy: media.uploadedBy
+        ? {
+            id: media.uploadedBy.id,
+            name: media.uploadedBy.name,
+            email: media.uploadedBy.email,
+          }
+        : null,
+      folder: media.folder,
+      tags: media.tags,
+      isPublic: media.isPublic,
+      cloudinaryId: media.cloudinaryId,
+      createdAt: media.createdAt,
+      updatedAt: media.updatedAt,
+    };
+  }
+
+  buildMediaData(file, uploadedBy, additionalData = {}) {
+    return {
+      filename: file.filename,
+      originalName: file.originalname,
+      url: `/uploads/${file.filename}`,
+      type: additionalData.type || this.detectMediaType(file.mimetype),
+      mimeType: file.mimetype,
+      size: file.size,
+      width: additionalData.width,
+      height: additionalData.height,
+      duration: additionalData.duration,
+      altEn: additionalData.alt?.en,
+      altBn: additionalData.alt?.bn,
+      captionEn: additionalData.caption?.en,
+      captionBn: additionalData.caption?.bn,
+      uploadedById: uploadedBy,
+      folder: additionalData.folder || 'general',
+      tags: additionalData.tags || [],
+      isPublic: additionalData.isPublic ?? true,
+      cloudinaryId: additionalData.cloudinaryId,
+    };
+  }
+
+  detectMediaType(mimeType = '') {
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.includes('pdf') || mimeType.includes('document')) return 'document';
+    return 'image';
+  }
+
   // Get all media files
   async getAllMedia(query, userId, userRole) {
     const { page, limit, skip } = getPaginationParams(query);
-    const sort = buildSortObject(query.sort || '-createdAt');
+    const orderBy = buildSortObject(query.sort || '-createdAt');
 
-    const filter = {};
+    const where = {};
 
-    // Non-admins can only see their own uploads
     if (!['admin', 'super_admin'].includes(userRole)) {
-      filter.uploadedBy = userId;
+      where.uploadedById = userId;
     }
 
-    if (query.type) filter.type = query.type;
-    if (query.folder) filter.folder = query.folder;
-    if (query.uploadedBy) filter.uploadedBy = query.uploadedBy;
+    if (query.type) where.type = query.type;
+    if (query.folder) where.folder = query.folder;
+    if (query.uploadedBy) where.uploadedById = query.uploadedBy;
 
-    // Search by filename
     if (query.search) {
-      filter.$or = [
-        { filename: { $regex: query.search, $options: 'i' } },
-        { originalName: { $regex: query.search, $options: 'i' } },
+      where.OR = [
+        { filename: { contains: query.search, mode: 'insensitive' } },
+        { originalName: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
     const [media, total] = await Promise.all([
-      Media.find(filter)
-        .populate('uploadedBy', 'name email')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      Media.countDocuments(filter),
+      prisma.media.findMany({
+        where,
+        include: {
+          uploadedBy: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.media.count({ where }),
     ]);
 
     return {
-      media,
+      media: media.map((item) => this.mapMedia(item)),
       pagination: { page, limit, total },
     };
   }
 
   // Get single media file
   async getMedia(mediaId) {
-    const media = await Media.findById(mediaId).populate('uploadedBy', 'name email').lean();
+    const media = await prisma.media.findUnique({
+      where: { id: mediaId },
+      include: {
+        uploadedBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
 
     if (!media) {
       throw new AppError('Media file not found', 404);
     }
 
-    return media;
+    return this.mapMedia(media);
   }
 
   // Upload media file
@@ -66,30 +143,16 @@ class MediaService {
       throw new AppError('No file provided', 400);
     }
 
-    // Determine media type
-    let type = 'image';
-    if (file.mimetype.startsWith('video/')) {
-      type = 'video';
-    } else if (file.mimetype.includes('pdf') || file.mimetype.includes('document')) {
-      type = 'document';
-    }
-
-    // Create media record
-    const media = await Media.create({
-      filename: file.filename,
-      originalName: file.originalname,
-      url: `/uploads/${file.filename}`,
-      type: type,
-      mimeType: file.mimetype,
-      size: file.size,
-      uploadedBy: uploadedBy,
-      folder: additionalData.folder || 'general',
-      alt: additionalData.alt,
-      caption: additionalData.caption,
-      tags: additionalData.tags,
+    const media = await prisma.media.create({
+      data: this.buildMediaData(file, uploadedBy, additionalData),
+      include: {
+        uploadedBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
     });
 
-    return media;
+    return this.mapMedia(media);
   }
 
   // Upload multiple files
@@ -98,100 +161,119 @@ class MediaService {
       throw new AppError('No files provided', 400);
     }
 
-    const uploadPromises = files.map((file) => this.uploadMedia(file, uploadedBy, additionalData));
+    const uploads = await Promise.all(
+      files.map((file) =>
+        prisma.media.create({
+          data: this.buildMediaData(file, uploadedBy, additionalData),
+          include: {
+            uploadedBy: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+        })
+      )
+    );
 
-    const media = await Promise.all(uploadPromises);
-    return media;
+    return uploads.map((media) => this.mapMedia(media));
   }
 
   // Update media metadata
   async updateMedia(mediaId, updates, userId, userRole) {
-    const media = await Media.findById(mediaId);
+    const media = await prisma.media.findUnique({ where: { id: mediaId } });
 
     if (!media) {
       throw new AppError('Media file not found', 404);
     }
 
-    // Check permissions
-    if (
-      !['admin', 'super_admin'].includes(userRole) &&
-      media.uploadedBy.toString() !== userId.toString()
-    ) {
+    if (!['admin', 'super_admin'].includes(userRole) && media.uploadedById !== userId) {
       throw new AppError('You do not have permission to update this media', 403);
     }
 
-    // Only allow updating certain fields
     const allowedUpdates = ['alt', 'caption', 'tags', 'folder', 'isPublic'];
+    const data = {};
+
     Object.keys(updates).forEach((key) => {
-      if (allowedUpdates.includes(key)) {
-        media[key] = updates[key];
+      if (!allowedUpdates.includes(key)) {
+        return;
+      }
+
+      if (key === 'alt') {
+        data.altEn = updates.alt?.en;
+        data.altBn = updates.alt?.bn;
+      } else if (key === 'caption') {
+        data.captionEn = updates.caption?.en;
+        data.captionBn = updates.caption?.bn;
+      } else {
+        data[key] = updates[key];
       }
     });
 
-    await media.save();
-    return media;
+    const updatedMedia = await prisma.media.update({
+      where: { id: mediaId },
+      data,
+      include: {
+        uploadedBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return this.mapMedia(updatedMedia);
   }
 
   // Delete media file
   async deleteMedia(mediaId, userId, userRole) {
-    const media = await Media.findById(mediaId);
+    const media = await prisma.media.findUnique({ where: { id: mediaId } });
 
     if (!media) {
       throw new AppError('Media file not found', 404);
     }
 
-    // Check permissions
-    if (
-      !['admin', 'super_admin'].includes(userRole) &&
-      media.uploadedBy.toString() !== userId.toString()
-    ) {
+    if (!['admin', 'super_admin'].includes(userRole) && media.uploadedById !== userId) {
       throw new AppError('You do not have permission to delete this media', 403);
     }
 
-    // Delete file from filesystem
     try {
       const filePath = path.join(__dirname, '../../../uploads', media.filename);
       await fs.unlink(filePath);
     } catch (error) {
       console.error('Error deleting file:', error);
-      // Continue with database deletion even if file deletion fails
     }
 
-    // Delete from database
-    await Media.findByIdAndDelete(mediaId);
+    await prisma.media.delete({ where: { id: mediaId } });
 
     return { message: 'Media file deleted successfully' };
   }
 
   // Get media statistics
   async getMediaStats() {
-    const totalMedia = await Media.countDocuments();
-    const imageCount = await Media.countDocuments({ type: 'image' });
-    const videoCount = await Media.countDocuments({ type: 'video' });
-    const documentCount = await Media.countDocuments({ type: 'document' });
-
-    const sizeStats = await Media.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalSize: { $sum: '$size' },
-        },
-      },
-    ]);
-
-    const recentUploads = await Media.find()
-      .sort('-createdAt')
-      .limit(10)
-      .populate('uploadedBy', 'name')
-      .lean();
+    const [totalMedia, imageCount, videoCount, documentCount, sizeStats, recentUploads] =
+      await Promise.all([
+        prisma.media.count(),
+        prisma.media.count({ where: { type: 'image' } }),
+        prisma.media.count({ where: { type: 'video' } }),
+        prisma.media.count({ where: { type: 'document' } }),
+        prisma.media.aggregate({
+          _sum: { size: true },
+        }),
+        prisma.media.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            uploadedBy: {
+              select: { id: true, name: true },
+            },
+          },
+        }),
+      ]);
 
     return {
       totalMedia,
       imageCount,
       videoCount,
       documentCount,
-      totalSize: sizeStats[0]?.totalSize || 0,
-      recentUploads,
+      totalSize: sizeStats._sum.size || 0,
+      recentUploads: recentUploads.map((upload) => this.mapMedia(upload)),
     };
   }
 }

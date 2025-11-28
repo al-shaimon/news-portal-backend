@@ -1,0 +1,8 @@
+{
+  email {env.EMAIL}
+}
+
+{env.DOMAIN} {
+  encoder gzip
+  reverse_proxy app:5000
+}

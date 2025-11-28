@@ -33,7 +33,7 @@ class AuthController {
   // @route   POST /api/v1/auth/logout
   // @access  Private
   logout = asyncHandler(async (req, res) => {
-    const result = await authService.logout(req.user._id);
+    const result = await authService.logout(req.user.id);
     sendResponse(res, 200, result, 'Logged out successfully');
   });
 
@@ -41,7 +41,7 @@ class AuthController {
   // @route   GET /api/v1/auth/me
   // @access  Private
   getCurrentUser = asyncHandler(async (req, res) => {
-    const result = await authService.getCurrentUser(req.user._id);
+    const result = await authService.getCurrentUser(req.user.id);
     sendResponse(res, 200, result, 'User retrieved successfully');
   });
 
@@ -50,7 +50,7 @@ class AuthController {
   // @access  Private
   changePassword = asyncHandler(async (req, res) => {
     const { currentPassword, newPassword } = req.body;
-    const result = await authService.changePassword(req.user._id, currentPassword, newPassword);
+    const result = await authService.changePassword(req.user.id, currentPassword, newPassword);
     sendResponse(res, 200, result, 'Password changed successfully');
   });
 
@@ -58,7 +58,7 @@ class AuthController {
   // @route   PUT /api/v1/auth/profile
   // @access  Private
   updateProfile = asyncHandler(async (req, res) => {
-    const result = await authService.updateProfile(req.user._id, req.body);
+    const result = await authService.updateProfile(req.user.id, req.body);
     sendResponse(res, 200, result, 'Profile updated successfully');
   });
 }

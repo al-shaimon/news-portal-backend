@@ -1,7 +1,7 @@
 # News Portal Backend API
 
 A modern, scalable REST API for a bilingual (English & Bangla) news portal built with Express.js and
-MongoDB.
+PostgreSQL (via Prisma ORM).
 
 ## Features
 
@@ -26,7 +26,7 @@ MongoDB.
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Database**: MongoDB with Mongoose
+- **Database**: PostgreSQL (Prisma ORM)
 - **Authentication**: JWT (JSON Web Tokens)
 - **File Upload**: Multer
 - **Validation**: Express-validator
@@ -46,12 +46,6 @@ backend/
 │   │   ├── errorHandler.js
 │   │   ├── validate.js
 │   │   └── rateLimiter.js
-│   ├── models/          # Mongoose models
-│   │   ├── User.model.js
-│   │   ├── Article.model.js
-│   │   ├── Category.model.js
-│   │   ├── Advertisement.model.js
-│   │   └── Media.model.js
 │   ├── modules/         # Feature modules
 │   │   ├── auth/
 │   │   ├── users/
@@ -63,8 +57,11 @@ backend/
 │   ├── utils/          # Utility functions
 │   ├── database/       # Database seeders
 │   └── server.js       # Entry point
+├── prisma/            # Prisma schema and migrations
+│   ├── schema.prisma
+│   └── migrations/
 ├── uploads/           # Uploaded files
-├── .env.example      # Environment variables example
+├── .env              # Environment variables
 ├── .gitignore
 └── package.json
 ```
@@ -85,16 +82,12 @@ npm install
 
 3. **Setup environment variables**
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env` file with your configuration:
+Create a `.env` file with your configuration:
 
 ```env
 NODE_ENV=development
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/news-portal
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/news_portal?schema=public
 JWT_SECRET=your-secret-key
 JWT_EXPIRE=7d
 FRONTEND_URL=http://localhost:3000
@@ -102,19 +95,25 @@ SUPER_ADMIN_EMAIL=admin@newsportal.com
 SUPER_ADMIN_PASSWORD=Admin@12345
 ```
 
-4. **Create uploads directory**
+4. **Run database migrations**
+
+```bash
+npx prisma migrate deploy
+```
+
+5. **Create uploads directory**
 
 ```bash
 mkdir uploads
 ```
 
-5. **Seed the database** (Creates super admin and default categories)
+6. **Seed the database** (Creates super admin and default categories)
 
 ```bash
 npm run seed
 ```
 
-6. **Start the server**
+7. **Start the server**
 
 Development mode with auto-reload:
 
@@ -127,6 +126,25 @@ Production mode:
 ```bash
 npm start
 ```
+
+## Docker Compose Deployment
+
+This repository now ships with a dedicated PostgreSQL container (`backend-db`) that is completely isolated from any other database you might be running (for example, the Postgres instance that powers your Next.js frontend). By default it binds to host port **5434** (configurable via `BACKEND_DB_PORT`), so it won’t collide with an existing Postgres service on `5432`.
+
+1. Ensure your `.env` file is configured (at minimum, `JWT_*`, `SUPER_ADMIN_*`, `FRONTEND_URL`). When developing on the host, Prisma connects through `DATABASE_URL=postgresql://news_portal_user:d123@localhost:5434/news_portal?schema=public`; inside the container the app overrides this to `postgresql://news_portal_user:d123@backend-db:5432/news_portal?schema=public`.
+2. Build and start the full stack:
+
+```bash
+docker compose up -d --build
+```
+
+3. (Optional) Run the seed script inside the container after the database is ready:
+
+```bash
+docker compose exec app npm run seed
+```
+
+The API will be available on `http://localhost:5000` (or the port you set via `PORT`).
 
 ## API Endpoints
 
@@ -221,7 +239,7 @@ After running the seeder:
 - Rate limiting
 - CORS protection
 - Helmet security headers
-- MongoDB injection prevention
+- Prisma-powered SQL injection protection
 - XSS protection
 
 ## Development
@@ -239,18 +257,18 @@ npm run dev
 - Controllers handle HTTP requests/responses
 - Routes define API endpoints
 - Validators handle input validation
-- Models define data schemas
+- Prisma schema defines data models
 
 ## Environment Variables
 
-| Variable     | Description               | Default               |
-| ------------ | ------------------------- | --------------------- |
-| NODE_ENV     | Environment mode          | development           |
-| PORT         | Server port               | 5000                  |
-| MONGODB_URI  | MongoDB connection string | -                     |
-| JWT_SECRET   | JWT secret key            | -                     |
-| JWT_EXPIRE   | JWT expiration time       | 7d                    |
-| FRONTEND_URL | Frontend URL for CORS     | http://localhost:3000 |
+| Variable      | Description                 | Default               |
+| ------------- | --------------------------- | --------------------- |
+| NODE_ENV      | Environment mode            | development           |
+| PORT          | Server port                 | 5000                  |
+| DATABASE_URL  | PostgreSQL connection URL   | -                     |
+| JWT_SECRET    | JWT secret key              | -                     |
+| JWT_EXPIRE    | JWT expiration time         | 7d                    |
+| FRONTEND_URL  | Frontend URL for CORS       | http://localhost:3000 |
 
 ## Contributing
 
@@ -266,3 +284,8 @@ ISC
 ## Support
 
 For issues and questions, please create an issue in the repository.
+Need the database without the API? You can start it standalone with:
+
+```bash
+docker compose up -d backend-db
+```

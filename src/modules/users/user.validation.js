@@ -27,7 +27,7 @@ export const createUserValidation = [
 ];
 
 export const updateUserValidation = [
-  param('id').isMongoId().withMessage('Invalid user ID'),
+  param('id').isUUID().withMessage('Invalid user ID'),
 
   body('name')
     .optional()
@@ -47,4 +47,4 @@ export const updateUserValidation = [
   body('isActive').optional().isBoolean().withMessage('isActive must be a boolean'),
 ];
 
-export const userIdValidation = [param('id').isMongoId().withMessage('Invalid user ID')];
+export const userIdValidation = [param('id').isUUID().withMessage('Invalid user ID')];

@@ -5,7 +5,8 @@ import { validate } from '../../middleware/validate.js';
 import {
   createArticleValidation,
   updateArticleValidation,
-  articleIdValidation,
+  articleIdentifierValidation,
+  articleIdParamValidation,
 } from './article.validation.js';
 import { USER_ROLES, PERMISSIONS } from '../../config/constants.js';
 
@@ -31,11 +32,11 @@ router.get(
 router.get(
   '/:identifier',
   optionalAuth,
-  articleIdValidation,
+  articleIdentifierValidation,
   validate,
   articleController.getArticle
 );
-router.get('/:id/related', articleIdValidation, validate, articleController.getRelatedArticles);
+router.get('/:id/related', articleIdParamValidation, validate, articleController.getRelatedArticles);
 
 // Protected routes - require authentication
 router.use(protect);
@@ -59,7 +60,7 @@ router.put(
 router.delete(
   '/:id',
   restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.JOURNALIST),
-  articleIdValidation,
+  articleIdParamValidation,
   validate,
   articleController.deleteArticle
 );
