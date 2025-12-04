@@ -30,13 +30,13 @@ class AdvertisementService {
       impressions: advertisement.impressions,
       clicks: advertisement.clicks,
       client: advertisement.client,
-      categories: advertisement.categories?.map((category) => ({
-        id: category.id,
+      categories: advertisement.categories?.map((ac) => ({
+        id: ac.category.id,
         name: {
-          en: category.nameEn,
-          bn: category.nameBn,
+          en: ac.category.nameEn,
+          bn: ac.category.nameBn,
         },
-        slug: category.slug,
+        slug: ac.category.slug,
       })),
       createdAt: advertisement.createdAt,
       updatedAt: advertisement.updatedAt,
@@ -79,11 +79,8 @@ class AdvertisementService {
         where,
         include: {
           categories: {
-            select: {
-              id: true,
-              nameEn: true,
-              nameBn: true,
-              slug: true,
+            include: {
+              category: true,
             },
           },
         },
@@ -117,7 +114,9 @@ class AdvertisementService {
       where,
       include: {
         categories: {
-          select: { id: true, nameEn: true, nameBn: true, slug: true },
+          include: {
+            category: true,
+          },
         },
       },
       orderBy: { priority: 'desc' },
@@ -132,7 +131,9 @@ class AdvertisementService {
       where: { id: adId },
       include: {
         categories: {
-          select: { id: true, nameEn: true, nameBn: true, slug: true },
+          include: {
+            category: true,
+          },
         },
       },
     });
@@ -153,13 +154,17 @@ class AdvertisementService {
         ...data,
         categories: adData.categories?.length
           ? {
-              connect: adData.categories.map((id) => ({ id })),
+              create: adData.categories.map((categoryId) => ({
+                category: { connect: { id: categoryId } },
+              })),
             }
           : undefined,
       },
       include: {
         categories: {
-          select: { id: true, nameEn: true, nameBn: true, slug: true },
+          include: {
+            category: true,
+          },
         },
       },
     });
@@ -172,8 +177,12 @@ class AdvertisementService {
     const data = this.buildAdvertisementData(updates);
 
     if (updates.categories) {
+      // Delete existing category associations and create new ones
       data.categories = {
-        set: updates.categories.map((id) => ({ id })),
+        deleteMany: {},
+        create: updates.categories.map((categoryId) => ({
+          category: { connect: { id: categoryId } },
+        })),
       };
     }
 
@@ -183,7 +192,9 @@ class AdvertisementService {
         data,
         include: {
           categories: {
-            select: { id: true, nameEn: true, nameBn: true, slug: true },
+            include: {
+              category: true,
+            },
           },
         },
       });
