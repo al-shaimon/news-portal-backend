@@ -203,9 +203,6 @@ class ArticleService {
       include: {
         category: true,
         author: true,
-        relatedArticles: {
-          where: { status: ARTICLE_STATUS.PUBLISHED },
-        },
       },
     });
 
@@ -235,16 +232,10 @@ class ArticleService {
         ...data,
         slug,
         metaKeywords: articleData.metaKeywords || [],
-        relatedArticles: articleData.relatedArticles?.length
-          ? {
-              connect: articleData.relatedArticles.map((id) => ({ id })),
-            }
-          : undefined,
       },
       include: {
         category: true,
         author: true,
-        relatedArticles: true,
       },
     });
 
@@ -284,12 +275,6 @@ class ArticleService {
       data.publishedAt = new Date();
     }
 
-    if (updates.relatedArticles) {
-      data.relatedArticles = {
-        set: updates.relatedArticles.map((id) => ({ id })),
-      };
-    }
-
     const updatedArticle = await prisma.article.update({
       where: { id: articleId },
       data: {
@@ -299,7 +284,6 @@ class ArticleService {
       include: {
         category: true,
         author: true,
-        relatedArticles: true,
       },
     });
 

@@ -28,18 +28,18 @@ class CategoryController {
   });
 
   // @desc    Update category
-  // @route   PUT /api/v1/categories/:id
+  // @route   PUT /api/v1/categories/:identifier
   // @access  Private (Admin)
   updateCategory = asyncHandler(async (req, res) => {
-    const category = await categoryService.updateCategory(req.params.id, req.body);
+    const category = await categoryService.updateCategory(req.params.identifier, req.body);
     sendResponse(res, 200, category, 'Category updated successfully');
   });
 
   // @desc    Delete category
-  // @route   DELETE /api/v1/categories/:id
+  // @route   DELETE /api/v1/categories/:identifier
   // @access  Private (Admin)
   deleteCategory = asyncHandler(async (req, res) => {
-    const result = await categoryService.deleteCategory(req.params.id);
+    const result = await categoryService.deleteCategory(req.params.identifier);
     sendResponse(res, 200, result, 'Category deleted successfully');
   });
 

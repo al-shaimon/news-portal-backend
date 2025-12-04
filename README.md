@@ -1,291 +1,697 @@
 # News Portal Backend API
 
-A modern, scalable REST API for a bilingual (English & Bangla) news portal built with Express.js and
-PostgreSQL (via Prisma ORM).
+A modern, production-ready REST API for a bilingual (English & Bangla) news portal built with
+Express.js and PostgreSQL. This backend powers a full-featured news platform with advanced content
+management, user roles, analytics, and advertisement tracking.
 
-## Features
+## 🚀 Features
 
-- 🔐 **Authentication & Authorization** - JWT-based with role-based access control
-- 📰 **Article Management** - Full CRUD operations with bilingual support
-- 📂 **Category Management** - Hierarchical category structure
-- 📢 **Advertisement System** - Ad management with tracking
-- 📁 **Media Management** - File upload and management system
-- 📊 **Dashboard Analytics** - Comprehensive statistics and insights
-- 🌐 **Bilingual Support** - English and Bangla content
-- 🔒 **Security** - Helmet, rate limiting, input sanitization
-- 📱 **RESTful API** - Well-structured and documented endpoints
+- 🔐 **Authentication & Authorization** - JWT-based auth with role-based access control (RBAC)
+- 📰 **Article Management** - Full CRUD with bilingual support, featured/breaking/trending flags
+- 📂 **Category Management** - Hierarchical category structure with parent-child relationships
+- 📢 **Advertisement System** - Complete ad management with impression/click tracking
+- 📁 **Media Management** - File upload system with metadata and organization
+- 📊 **Dashboard Analytics** - Real-time statistics and insights
+- 🌐 **Bilingual Content** - Native support for English and Bangla
+- 🔒 **Enterprise Security** - Helmet, rate limiting, input sanitization, SQL injection protection
+- 📱 **RESTful API** - Clean, well-documented endpoints with consistent response format
+- 🎯 **Advanced Querying** - Filtering, sorting, pagination, and search capabilities
 
-## User Roles
+## 👥 User Roles & Permissions
 
-- **Super Admin** - Full system access
-- **Admin** - Manage content, users, and settings
-- **Journalist** - Create and manage own articles
-- **Reader** - Public access (no authentication required)
+| Role            | Permissions                                                        |
+| --------------- | ------------------------------------------------------------------ |
+| **Super Admin** | Full system access, user management, system settings               |
+| **Admin**       | Manage all content, users (except super admins), and site settings |
+| **Journalist**  | Create and manage own articles, view analytics                     |
+| **Reader**      | Public access (no authentication required)                         |
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL (Prisma ORM)
-- **Authentication**: JWT (JSON Web Tokens)
-- **File Upload**: Multer
-- **Validation**: Express-validator
-- **Security**: Helmet, CORS, Rate Limiting
+| Category             | Technology                  |
+| -------------------- | --------------------------- |
+| **Runtime**          | Node.js v22.x               |
+| **Framework**        | Express.js 4.x              |
+| **Database**         | PostgreSQL 18+              |
+| **ORM**              | Prisma 5.x                  |
+| **Authentication**   | JWT (JSON Web Tokens)       |
+| **File Upload**      | Multer                      |
+| **Validation**       | Express-validator           |
+| **Security**         | Helmet, CORS, Rate Limiting |
+| **Containerization** | Docker & Docker Compose     |
 
-## Project Structure
+## 📁 Project Structure
 
-```
+```text
 backend/
+├── prisma/
+│   ├── schema.prisma              # Database schema with all models
+│   └── migrations/                # Database migrations
+│       └── 20240701000000_init/
 ├── src/
-│   ├── config/           # Configuration files
-│   │   ├── database.js
-│   │   ├── constants.js
-│   │   └── multer.js
-│   ├── middleware/       # Express middleware
-│   │   ├── auth.js
-│   │   ├── errorHandler.js
-│   │   ├── validate.js
-│   │   └── rateLimiter.js
-│   ├── modules/         # Feature modules
-│   │   ├── auth/
-│   │   ├── users/
-│   │   ├── articles/
-│   │   ├── categories/
-│   │   ├── advertisements/
-│   │   ├── media/
-│   │   └── dashboard/
-│   ├── utils/          # Utility functions
-│   ├── database/       # Database seeders
-│   └── server.js       # Entry point
-├── prisma/            # Prisma schema and migrations
-│   ├── schema.prisma
-│   └── migrations/
-├── uploads/           # Uploaded files
-├── .env              # Environment variables
-├── .gitignore
-└── package.json
+│   ├── config/
+│   │   ├── database.js            # Prisma client initialization
+│   │   ├── constants.js           # App-wide constants
+│   │   └── multer.js              # File upload configuration
+│   ├── middleware/
+│   │   ├── auth.js                # JWT authentication & authorization
+│   │   ├── errorHandler.js        # Global error handling
+│   │   ├── notFound.js            # 404 handler
+│   │   ├── rateLimiter.js         # Rate limiting
+│   │   └── validate.js            # Request validation
+│   ├── modules/
+│   │   ├── auth/                  # Login, logout, token refresh
+│   │   ├── users/                 # User management
+│   │   ├── articles/              # Article CRUD & queries
+│   │   ├── categories/            # Category management
+│   │   ├── advertisements/        # Ad management & tracking
+│   │   ├── media/                 # File upload & management
+│   │   └── dashboard/             # Analytics & statistics
+│   ├── database/
+│   │   └── seeders/
+│   │       └── adminSeeder.js     # Initial super admin creation
+│   ├── utils/
+│   │   ├── asyncHandler.js        # Async error wrapper
+│   │   ├── queryUtils.js          # Query builders
+│   │   ├── responseUtils.js       # Standardized responses
+│   │   ├── slugUtils.js           # Slug generation
+│   │   └── tokenUtils.js          # JWT utilities
+│   └── server.js                  # App entry point
+├── uploads/                       # User-uploaded files
+├── .env                          # Environment variables (not in git)
+├── .env.example                  # Environment template
+├── docker-compose.yml            # Docker setup
+├── Dockerfile                    # Container image
+├── package.json                  # Dependencies
+├── postman_collection.json       # API testing collection
+└── README.md                     # This file
 ```
 
-## Installation
+## 🗄️ Database Schema
 
-1. **Clone the repository**
+### Entity Relationship Diagram
+
+```text
+┌─────────────────┐         ┌──────────────────┐         ┌─────────────────────┐
+│      User       │         │     Article      │         │      Category       │
+├─────────────────┤         ├──────────────────┤         ├─────────────────────┤
+│ id (PK)         │────────>│ authorId (FK)    │     ┌──>│ id (PK)             │
+│ name            │ 1     * │ categoryId (FK)  │─────┘   │ nameEn              │
+│ email (unique)  │         │ titleEn          │      *  │ nameBn              │
+│ password        │         │ titleBn          │    ┌────│ parentId (FK)       │
+│ role (enum)     │         │ contentEn        │    │ 1  │ slug (unique)       │
+│ avatar          │         │ contentBn        │    │    │ descriptionEn/Bn    │
+│ phone           │         │ slug (unique)    │    │    │ image               │
+│ bio             │         │ excerptEn/Bn     │    │    │ order               │
+│ isActive        │         │ featuredImage    │    │    │ isActive            │
+│ isEmailVerified │         │ gallery          │    │    │ showInMenu          │
+│ lastLogin       │         │ tags             │    │    │ metaTitleEn/Bn      │
+│ refreshToken    │         │ status (enum)    │    └────│ metaDescriptionEn/Bn│
+│ createdAt       │         │ publishedAt      │         └─────────────────────┘
+│ updatedAt       │         │ scheduledAt      │                  │
+└─────────────────┘         │ isFeatured       │           parent-child
+       │                    │ isBreaking       │           self-join (*)
+       │ 1                  │ isTrending       │
+       │                    │ views            │
+       │                    │ likes            │
+       │                    │ shares           │
+       │                    │ readTime         │
+       │                    │ metaTitleEn/Bn   │
+       │                    │ allowComments    │
+       │                    │ createdAt        │
+       │                    │ updatedAt        │
+       │                    └──────────────────┘
+       │ *
+       v
+┌─────────────────┐         ┌──────────────────────┐         ┌─────────────────────────────┐
+│      Media      │         │   Advertisement      │         │   AdvertisementCategory     │
+├─────────────────┤         ├──────────────────────┤         ├─────────────────────────────┤
+│ id (PK)         │         │ id (PK)              │────┐    │ advertisementId (PK,FK)     │
+│ filename        │         │ name                 │    │ *  │ categoryId (PK,FK)          │
+│ originalName    │         │ titleEn/titleBn      │    └───>└─────────────────────────────┘
+│ url             │         │ descriptionEn/Bn     │              │ (Join Table)
+│ type (enum)     │         │ type (enum)          │              │
+│ mimeType        │         │ position (enum)      │              v
+│ size            │         │ image (json)         │         ┌─────────────────────┐
+│ width/height    │         │ linkUrl              │         │      Category       │
+│ duration        │         │ openInNewTab         │         └─────────────────────┘
+│ altEn/altBn     │         │ startDate            │              * many-to-many
+│ captionEn/Bn    │         │ endDate              │
+│ uploadedById(FK)│         │ isActive             │
+│ folder          │         │ priority             │
+│ tags[]          │         │ displayPages[]       │
+│ isPublic        │         │ impressions          │
+│ cloudinaryId    │         │ clicks               │
+│ createdAt       │         │ client (json)        │
+│ updatedAt       │         │ createdAt            │
+└─────────────────┘         │ updatedAt            │
+                            └──────────────────────┘
+```
+
+### Models Overview
+
+#### User
+
+Authentication and user management with role-based access.
+
+- **Roles**: `super_admin`, `admin`, `journalist`, `reader`
+- **Key Fields**: id, name, email (unique), password (hashed), role, avatar, isActive
+- **Relations**: articles (1:many), media (1:many)
+
+#### Category
+
+Hierarchical content organization with unlimited nesting.
+
+- **Features**: Self-referential parent-child relationships, bilingual support
+- **Key Fields**: id, nameEn, nameBn, slug (unique), parentId, order, isActive, showInMenu
+- **Relations**: parent (many:1), children (1:many), articles (1:many), advertisements (many:many)
+
+#### Article
+
+News content with rich metadata and bilingual support.
+
+- **Status Values**: `draft`, `published`, `archived`, `scheduled`
+- **Special Flags**: isFeatured, isBreaking, isTrending
+- **Tracking**: views, likes, shares, readTime
+- **Key Fields**: titleEn/Bn, contentEn/Bn, slug (unique), featuredImage, gallery, tags, status
+- **Relations**: author (many:1 User), category (many:1 Category)
+
+#### Advertisement
+
+Ad management with scheduling and performance tracking.
+
+- **Ad Types**: `banner`, `sidebar`, `in_content`, `popup`
+- **Positions**: `top`, `middle`, `bottom`, `sidebar_top`, `sidebar_middle`, `sidebar_bottom`
+- **Scheduling**: startDate, endDate (date-range based display)
+- **Tracking**: impressions (views), clicks
+- **Key Fields**: name, titleEn/Bn, type, position, image, linkUrl, priority, displayPages[]
+- **Relations**: categories (many:many via AdvertisementCategory join table)
+
+#### Media
+
+File management with metadata and organization.
+
+- **Media Types**: `image`, `video`, `document`
+- **Metadata**: filename, url, mimeType, size, dimensions (width/height), duration
+- **Organization**: folder, tags[], isPublic
+- **Bilingual**: altEn/Bn, captionEn/Bn
+- **Relations**: uploadedBy (many:1 User)
+
+#### AdvertisementCategory (Join Table)
+
+Many-to-many relationship between Advertisements and Categories.
+
+- **Composite Primary Key**: [advertisementId, categoryId]
+- **Purpose**: Associates ads with specific content categories for targeted display
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js >= 22.0.0
+- PostgreSQL >= 18.0
+- npm or yarn
+
+### Local Development Setup
+
+#### Step 1: Clone Repository
 
 ```bash
-cd backend
+git clone <repository-url>
+cd news-portal/backend
 ```
 
-2. **Install dependencies**
+#### Step 2: Install Dependencies
 
 ```bash
 npm install
 ```
 
-3. **Setup environment variables**
+#### Step 3: Configure Environment
 
-Create a `.env` file with your configuration:
+Create `.env` file in the backend root:
 
 ```env
+# Server Configuration
 NODE_ENV=development
 PORT=5000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/news_portal?schema=public
-JWT_SECRET=your-secret-key
+
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://news_portal_user:d123@localhost:5432/news_portal?schema=public
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
 JWT_EXPIRE=7d
+
+# Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:3000
+
+# Super Admin Credentials (for seeding)
 SUPER_ADMIN_EMAIL=admin@newsportal.com
 SUPER_ADMIN_PASSWORD=Admin@12345
 ```
 
-4. **Run database migrations**
+#### Step 4: Setup PostgreSQL Database
+
+Choose one of the following options:
+
+##### Option A: Local PostgreSQL
+
+```powershell
+# Connect to PostgreSQL
+psql -U postgres
+
+# Create database
+CREATE DATABASE news_portal;
+
+# Create user with privileges
+CREATE USER news_portal_user WITH PASSWORD 'd123';
+GRANT ALL PRIVILEGES ON DATABASE news_portal TO news_portal_user;
+
+# Exit psql
+\q
+```
+
+##### Option B: Docker PostgreSQL
+
+```bash
+docker run --name news-portal-db \
+  -e POSTGRES_DB=news_portal \
+  -e POSTGRES_USER=news_portal_user \
+  -e POSTGRES_PASSWORD=d123 \
+  -p 5432:5432 \
+  -d postgres:18
+```
+
+#### Step 5: Run Database Migrations
+
+Apply the schema to your database:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-5. **Create uploads directory**
+#### Step 6: Create Uploads Directory
 
 ```bash
 mkdir uploads
 ```
 
-6. **Seed the database** (Creates super admin and default categories)
+#### Step 7: Seed the Database
+
+Creates super admin user and default categories:
 
 ```bash
 npm run seed
 ```
 
-7. **Start the server**
+**Default Credentials:**
 
-Development mode with auto-reload:
+- Email: `admin@newsportal.com`
+- Password: `Admin@12345`
+
+#### Step 8: Start Development Server
 
 ```bash
 npm run dev
 ```
 
-Production mode:
+The API will be available at: `http://localhost:5000`
 
-```bash
-npm start
+### Docker Deployment
+
+The project includes Docker support with isolated PostgreSQL container (port 5434 by default).
+
+#### Step 1: Configure Docker Environment
+
+Ensure `.env` has Docker-compatible settings:
+
+```env
+DATABASE_URL=postgresql://news_portal_user:d123@localhost:5434/news_portal?schema=public
+BACKEND_DB_PORT=5434
+JWT_SECRET=your-secret-key
+FRONTEND_URL=http://localhost:3000
 ```
 
-## Docker Compose Deployment
-
-This repository now ships with a dedicated PostgreSQL container (`backend-db`) that is completely isolated from any other database you might be running (for example, the Postgres instance that powers your Next.js frontend). By default it binds to host port **5434** (configurable via `BACKEND_DB_PORT`), so it won’t collide with an existing Postgres service on `5432`.
-
-1. Ensure your `.env` file is configured (at minimum, `JWT_*`, `SUPER_ADMIN_*`, `FRONTEND_URL`). When developing on the host, Prisma connects through `DATABASE_URL=postgresql://news_portal_user:d123@localhost:5434/news_portal?schema=public`; inside the container the app overrides this to `postgresql://news_portal_user:d123@backend-db:5432/news_portal?schema=public`.
-2. Build and start the full stack:
+#### Step 2: Start with Docker Compose
 
 ```bash
 docker compose up -d --build
 ```
 
-3. (Optional) Run the seed script inside the container after the database is ready:
+#### Step 3: Seed Database (Optional)
+
+Run seeder inside container:
 
 ```bash
 docker compose exec app npm run seed
 ```
 
-The API will be available on `http://localhost:5000` (or the port you set via `PORT`).
+The API will be available at: `http://localhost:5000`
 
-## API Endpoints
+## 📡 API Endpoints
 
-### Authentication
+Complete API documentation: See `API_DOCUMENTATION.md`
 
-- `POST /api/v1/auth/register` - Register new user
-- `POST /api/v1/auth/login` - Login user
-- `POST /api/v1/auth/refresh-token` - Refresh access token
-- `POST /api/v1/auth/logout` - Logout user
-- `GET /api/v1/auth/me` - Get current user
-- `PUT /api/v1/auth/change-password` - Change password
-- `PUT /api/v1/auth/profile` - Update profile
+### Quick Reference
 
-### Users (Admin Only)
+#### Authentication (`/api/v1/auth`)
 
-- `GET /api/v1/users` - Get all users
-- `GET /api/v1/users/:id` - Get user by ID
-- `POST /api/v1/users` - Create user
-- `PUT /api/v1/users/:id` - Update user
-- `DELETE /api/v1/users/:id` - Delete user
-- `GET /api/v1/users/stats` - Get user statistics
+| Method | Endpoint           | Description          | Auth |
+| ------ | ------------------ | -------------------- | ---- |
+| POST   | `/register`        | Register new user    | ❌   |
+| POST   | `/login`           | User login           | ❌   |
+| POST   | `/refresh-token`   | Refresh access token | ❌   |
+| POST   | `/logout`          | User logout          | ✅   |
+| GET    | `/me`              | Get current user     | ✅   |
+| PUT    | `/change-password` | Change password      | ✅   |
 
-### Articles
+#### Users (`/api/v1/users`)
 
-- `GET /api/v1/articles` - Get all articles (public)
-- `GET /api/v1/articles/:identifier` - Get single article
-- `POST /api/v1/articles` - Create article (Auth required)
-- `PUT /api/v1/articles/:id` - Update article (Auth required)
-- `DELETE /api/v1/articles/:id` - Delete article (Auth required)
-- `GET /api/v1/articles/featured/list` - Get featured articles
-- `GET /api/v1/articles/breaking/list` - Get breaking news
-- `GET /api/v1/articles/trending/list` - Get trending articles
-- `GET /api/v1/articles/latest/list` - Get latest articles
-- `GET /api/v1/articles/search/query` - Search articles
-- `GET /api/v1/articles/:id/related` - Get related articles
+| Method | Endpoint       | Description          | Auth | Role   |
+| ------ | -------------- | -------------------- | ---- | ------ |
+| GET    | `/`            | List all users       | ✅   | Admin+ |
+| GET    | `/:identifier` | Get user by ID/email | ✅   | Admin+ |
+| POST   | `/`            | Create new user      | ✅   | Admin+ |
+| PUT    | `/:id`         | Update user          | ✅   | Admin+ |
+| DELETE | `/:id`         | Delete user          | ✅   | Admin+ |
 
-### Categories
+#### Categories (`/api/v1/categories`)
 
-- `GET /api/v1/categories` - Get all categories
-- `GET /api/v1/categories/:identifier` - Get single category
-- `POST /api/v1/categories` - Create category (Admin)
-- `PUT /api/v1/categories/:id` - Update category (Admin)
-- `DELETE /api/v1/categories/:id` - Delete category (Admin)
-- `GET /api/v1/categories/tree/all` - Get category tree
-- `GET /api/v1/categories/menu/list` - Get menu categories
-- `GET /api/v1/categories/:identifier/articles` - Get category articles
+| Method | Endpoint       | Description            | Auth | Role   |
+| ------ | -------------- | ---------------------- | ---- | ------ |
+| GET    | `/`            | List categories        | ❌   | Public |
+| GET    | `/:identifier` | Get category (ID/slug) | ❌   | Public |
+| POST   | `/`            | Create category        | ✅   | Admin+ |
+| PUT    | `/:identifier` | Update category        | ✅   | Admin+ |
+| DELETE | `/:identifier` | Delete category        | ✅   | Admin+ |
 
-### Advertisements
+**Query Parameters:**
 
-- `GET /api/v1/advertisements` - Get all ads (Admin)
-- `GET /api/v1/advertisements/active` - Get active ads (Public)
-- `GET /api/v1/advertisements/:id` - Get single ad (Admin)
-- `POST /api/v1/advertisements` - Create ad (Admin)
-- `PUT /api/v1/advertisements/:id` - Update ad (Admin)
-- `DELETE /api/v1/advertisements/:id` - Delete ad (Admin)
-- `POST /api/v1/advertisements/:id/impression` - Track impression
-- `POST /api/v1/advertisements/:id/click` - Track click
+- `parent` - Filter by parent ID (use "null" for root categories)
+- `active` - Filter by active status (true/false)
+- `menu` - Show only menu categories (true/false)
+- `search` - Search in names and descriptions
 
-### Media
+#### Articles (`/api/v1/articles`)
 
-- `GET /api/v1/media` - Get all media (Auth required)
-- `GET /api/v1/media/:id` - Get single media
-- `POST /api/v1/media/upload` - Upload single file
-- `POST /api/v1/media/upload/multiple` - Upload multiple files
-- `PUT /api/v1/media/:id` - Update media metadata
-- `DELETE /api/v1/media/:id` - Delete media
+| Method | Endpoint       | Description           | Auth | Role          |
+| ------ | -------------- | --------------------- | ---- | ------------- |
+| GET    | `/`            | List articles         | ❌   | Public        |
+| GET    | `/featured`    | Get featured articles | ❌   | Public        |
+| GET    | `/breaking`    | Get breaking news     | ❌   | Public        |
+| GET    | `/trending`    | Get trending articles | ❌   | Public        |
+| GET    | `/:identifier` | Get article (ID/slug) | ❌   | Public        |
+| POST   | `/`            | Create article        | ✅   | Journalist+   |
+| PUT    | `/:id`         | Update article        | ✅   | Author/Admin+ |
+| DELETE | `/:id`         | Delete article        | ✅   | Author/Admin+ |
 
-### Dashboard (Admin Only)
+**Query Parameters:**
 
-- `GET /api/v1/dashboard/overview` - Get overview statistics
-- `GET /api/v1/dashboard/articles/stats` - Get article statistics
-- `GET /api/v1/dashboard/articles/top` - Get top articles
-- `GET /api/v1/dashboard/categories/distribution` - Category distribution
-- `GET /api/v1/dashboard/users/activity` - User activity
-- `GET /api/v1/dashboard/traffic/trends` - Traffic trends
+- `status` - Filter by status (draft/published/archived/scheduled)
+- `category` - Filter by category ID
+- `author` - Filter by author ID
+- `featured` - Featured only (true/false)
+- `breaking` - Breaking news only (true/false)
+- `trending` - Trending only (true/false)
+- `search` - Search in title and content
+- `sort` - Sort by field (publishedAt, views, likes, createdAt)
+- `order` - Sort order (asc/desc)
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10)
 
-## Default Credentials
+#### Advertisements (`/api/v1/advertisements`)
 
-After running the seeder:
+| Method | Endpoint  | Description    | Auth | Role   |
+| ------ | --------- | -------------- | ---- | ------ |
+| GET    | `/`       | List all ads   | ✅   | Admin+ |
+| GET    | `/active` | Get active ads | ❌   | Public |
+| GET    | `/:id`    | Get ad by ID   | ✅   | Admin+ |
+| POST   | `/`       | Create ad      | ✅   | Admin+ |
+| PUT    | `/:id`    | Update ad      | ✅   | Admin+ |
+| DELETE | `/:id`    | Delete ad      | ✅   | Admin+ |
 
-- **Email**: admin@newsportal.com
-- **Password**: Admin@12345
+**Active Ads Query Parameters:**
 
-⚠️ **IMPORTANT**: Change the password after first login!
+- `type` - Filter by ad type (banner/sidebar/in_content/popup)
+- `position` - Filter by position (top/middle/bottom/sidebar\_\*)
+- `page` - Filter by display page
 
-## Security Features
+#### Media (`/api/v1/media`)
 
-- JWT authentication with refresh tokens
-- Password hashing with bcrypt
-- Role-based access control (RBAC)
-- Input validation and sanitization
-- Rate limiting
-- CORS protection
-- Helmet security headers
-- Prisma-powered SQL injection protection
-- XSS protection
+| Method | Endpoint  | Description           | Auth | Role            |
+| ------ | --------- | --------------------- | ---- | --------------- |
+| GET    | `/`       | List media files      | ✅   | Any             |
+| GET    | `/:id`    | Get media by ID       | ✅   | Any             |
+| POST   | `/upload` | Upload file           | ✅   | Journalist+     |
+| PUT    | `/:id`    | Update media metadata | ✅   | Uploader/Admin+ |
+| DELETE | `/:id`    | Delete media          | ✅   | Uploader/Admin+ |
 
-## Development
+**Query Parameters:**
 
-### Running in Development Mode
+- `type` - Filter by type (image/video/document)
+- `folder` - Filter by folder
+- `search` - Search in filename and captions
 
-```bash
-npm run dev
-```
+#### Dashboard (`/api/v1/dashboard`)
 
-### Code Structure Guidelines
+| Method | Endpoint | Description    | Auth | Role   |
+| ------ | -------- | -------------- | ---- | ------ |
+| GET    | `/stats` | Get statistics | ✅   | Admin+ |
 
-- Each module follows the MVC pattern
-- Services handle business logic
-- Controllers handle HTTP requests/responses
-- Routes define API endpoints
-- Validators handle input validation
-- Prisma schema defines data models
+**Returns:**
 
-## Environment Variables
+- User counts (total, by role, active)
+- Article counts (total, by status, views/likes/shares)
+- Category counts
+- Media counts (by type, total size)
+- Advertisement metrics (impressions, clicks)
 
-| Variable      | Description                 | Default               |
-| ------------- | --------------------------- | --------------------- |
-| NODE_ENV      | Environment mode            | development           |
-| PORT          | Server port                 | 5000                  |
-| DATABASE_URL  | PostgreSQL connection URL   | -                     |
-| JWT_SECRET    | JWT secret key              | -                     |
-| JWT_EXPIRE    | JWT expiration time         | 7d                    |
-| FRONTEND_URL  | Frontend URL for CORS       | http://localhost:3000 |
+## 🔐 Authentication
 
-## Contributing
+The API uses JWT (JSON Web Tokens) for authentication.
 
-1. Follow the existing code structure
-2. Use ES6 modules syntax
-3. Write clean, commented code
-4. Test all endpoints before committing
+### Login Flow
 
-## License
+1. **Login**: POST `/api/v1/auth/login` with email and password
+2. **Receive Token**: Get access token and refresh token
+3. **Use Token**: Include in `Authorization` header: `Bearer <token>`
+4. **Refresh**: Use refresh token to get new access token when expired
 
-ISC
-
-## Support
-
-For issues and questions, please create an issue in the repository.
-Need the database without the API? You can start it standalone with:
+### Example Authentication
 
 ```bash
-docker compose up -d backend-db
+# Login
+curl -X POST http://localhost:5000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@newsportal.com","password":"Admin@12345"}'
+
+# Response
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "user": { ... },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "..."
+  }
+}
+
+# Use token in requests
+curl http://localhost:5000/api/v1/users \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
+
+## 🧪 Testing
+
+### Postman Collection
+
+A complete Postman collection with example requests is included: `postman_collection.json`
+
+**Features:**
+
+- Pre-configured environment variables
+- Auto-save authentication tokens
+- Example payloads for all endpoints
+- Test data based on seeded database
+
+**Import into Postman:**
+
+1. Open Postman
+2. Click "Import"
+3. Select `postman_collection.json`
+4. Set environment variable `base_url` to `http://localhost:5000`
+
+### Manual Testing Examples
+
+#### Create Category
+
+```bash
+curl -X POST http://localhost:5000/api/v1/categories \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nameEn": "Technology",
+    "nameBn": "প্রযুক্তি",
+    "descriptionEn": "Tech news and updates",
+    "descriptionBn": "প্রযুক্তি সংবাদ এবং আপডেট"
+  }'
+```
+
+#### Create Article
+
+```bash
+curl -X POST http://localhost:5000/api/v1/articles \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": {
+      "en": "Breaking Tech News",
+      "bn": "প্রযুক্তি সংবাদ"
+    },
+    "content": {
+      "en": "Full article content here...",
+      "bn": "সম্পূর্ণ নিবন্ধ বিষয়বস্তু এখানে..."
+    },
+    "categoryId": "<category-uuid>",
+    "status": "published",
+    "isFeatured": true
+  }'
+```
+
+#### Get Active Advertisements
+
+```bash
+curl http://localhost:5000/api/v1/advertisements/active?type=banner&position=top
+```
+
+## 📝 Environment Variables
+
+| Variable             | Description                          | Default                 | Required    |
+| -------------------- | ------------------------------------ | ----------------------- | ----------- |
+| NODE_ENV             | Environment (development/production) | development             | No          |
+| PORT                 | Server port                          | 5000                    | No          |
+| DATABASE_URL         | PostgreSQL connection string         | -                       | Yes         |
+| JWT_SECRET           | Secret for JWT signing               | -                       | Yes         |
+| JWT_EXPIRE           | Token expiration time                | 7d                      | No          |
+| FRONTEND_URL         | Frontend URL for CORS                | `http://localhost:3000` | No          |
+| SUPER_ADMIN_EMAIL    | Super admin email for seeding        | -                       | For seeding |
+| SUPER_ADMIN_PASSWORD | Super admin password for seeding     | -                       | For seeding |
+| BACKEND_DB_PORT      | Docker PostgreSQL port               | 5434                    | For Docker  |
+
+## 🔒 Security Features
+
+- **Helmet.js**: HTTP headers security
+- **CORS**: Cross-origin resource sharing protection
+- **Rate Limiting**: Prevents brute force attacks
+- **Input Validation**: Express-validator for request validation
+- **SQL Injection Protection**: Prisma parameterized queries
+- **Password Hashing**: bcrypt with salt rounds
+- **JWT**: Secure token-based authentication
+- **Role-Based Access**: Authorization middleware
+
+## 📊 Database Management
+
+### Prisma Commands
+
+```bash
+# Generate Prisma Client
+npx prisma generate
+
+# Create new migration
+npx prisma migrate dev --name migration_name
+
+# Deploy migrations (production)
+npx prisma migrate deploy
+
+# Reset database (dev only - deletes all data!)
+npx prisma migrate reset
+
+# Open Prisma Studio (database GUI)
+npx prisma studio
+```
+
+### Backup & Restore
+
+```bash
+# Backup database
+pg_dump -U news_portal_user -h localhost -p 5432 news_portal > backup.sql
+
+# Restore database
+psql -U news_portal_user -h localhost -p 5432 news_portal < backup.sql
+```
+
+## 🚀 Deployment
+
+### Production Checklist
+
+- [ ] Set strong `JWT_SECRET`
+- [ ] Change default super admin credentials
+- [ ] Set `NODE_ENV=production`
+- [ ] Configure production database URL
+- [ ] Set up proper CORS origins
+- [ ] Configure file upload limits
+- [ ] Set up database backups
+- [ ] Configure proper logging
+- [ ] Set up monitoring (PM2, etc.)
+- [ ] Use HTTPS in production
+- [ ] Set up rate limiting based on load
+- [ ] Review and update security headers
+
+### PM2 Deployment
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start application
+pm2 start src/server.js --name news-portal-api
+
+# Save PM2 process list
+pm2 save
+
+# Setup PM2 to start on boot
+pm2 startup
+```
+
+## 📚 Project Documentation
+
+| Document                  | Description                                |
+| ------------------------- | ------------------------------------------ |
+| `README.md`               | Complete setup and usage guide (this file) |
+| `API_DOCUMENTATION.md`    | Detailed API endpoint documentation        |
+| `postman_collection.json` | Postman collection for API testing         |
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👨‍💻 Support
+
+For issues and questions:
+
+- Check `API_DOCUMENTATION.md` for detailed API usage
+- Review Postman collection for example requests
+- Check Prisma schema for database structure
+
+## 🔄 Changelog
+
+### v1.0.0 (Current)
+
+- Initial release
+- Complete CRUD operations for all entities
+- JWT authentication with role-based access
+- Bilingual support (English & Bangla)
+- File upload system
+- Dashboard analytics
+- Advertisement tracking
+- PostgreSQL with Prisma ORM
+- Docker support

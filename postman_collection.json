@@ -1,88 +1,222 @@
 {
   "info": {
-    "name": "News Portal API",
-    "description": "Complete API collection for News Portal Backend",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "News Portal API - Complete Collection",
+    "description": "Complete API collection for News Portal Backend with PostgreSQL & Prisma",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "news-portal-api-complete",
+    "version": "1.0.0"
   },
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:5000/api/v1"
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
     },
     {
       "key": "token",
-      "value": ""
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "category_id",
+      "value": "dd2218ea-45af-42da-952b-42867d2863ec",
+      "type": "string"
+    },
+    {
+      "key": "article_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "Authentication",
       "item": [
         {
-          "name": "Login",
+          "name": "Login - Super Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('token', response.data.accessToken);",
+                  "    pm.collectionVariables.set('user_id', response.data.user.id);",
+                  "    console.log('Token saved:', response.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@newsportal.com\",\n  \"password\": \"Admin@12345\"\n}"
             },
-            "url": "{{base_url}}/auth/login"
-          }
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with super admin credentials"
+          },
+          "response": []
         },
         {
-          "name": "Register",
+          "name": "Register - New User",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123\"\n}"
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"Password@123\",\n  \"phone\": \"+8801712345678\",\n  \"bio\": \"A passionate reader\"\n}"
             },
-            "url": "{{base_url}}/auth/register"
-          }
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user (default role: reader)"
+          },
+          "response": []
         },
         {
           "name": "Get Current User",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/auth/me"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Articles",
-      "item": [
-        {
-          "name": "Get All Articles",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/articles?page=1&limit=10"
-          }
-        },
-        {
-          "name": "Get Featured Articles",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/articles/featured/list?limit=5"
-          }
-        },
-        {
-          "name": "Create Article",
-          "request": {
-            "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": {\n    \"en\": \"Breaking News: Technology Advancement\",\n    \"bn\": \"ব্রেকিং নিউজ: প্রযুক্তির অগ্রগতি\"\n  },\n  \"content\": {\n    \"en\": \"Full article content goes here...\",\n    \"bn\": \"সম্পূর্ণ নিবন্ধের বিষয়বস্তু এখানে যায়...\"\n  },\n  \"excerpt\": {\n    \"en\": \"Short summary\",\n    \"bn\": \"সংক্ষিপ্ত সারাংশ\"\n  },\n  \"category\": \"CATEGORY_ID\",\n  \"status\": \"published\",\n  \"isFeatured\": false\n}"
+              "raw": "{\n  \"currentPassword\": \"Admin@12345\",\n  \"newPassword\": \"NewPassword@123\"\n}"
             },
-            "url": "{{base_url}}/articles"
-          }
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Change user password"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Super Administrator\",\n  \"phone\": \"+8801712345678\",\n  \"bio\": \"Managing the news portal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "Update user profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout current user"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"YOUR_REFRESH_TOKEN_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh-token"]
+            },
+            "description": "Refresh access token using refresh token"
+          },
+          "response": []
         }
       ]
     },
@@ -93,15 +227,1121 @@
           "name": "Get All Categories",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/categories"
-          }
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Get all categories (public)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category by ID/Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/politics",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "politics"]
+            },
+            "description": "Get single category by ID or slug"
+          },
+          "response": []
         },
         {
           "name": "Get Category Tree",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/categories/tree/all"
-          }
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/tree/all",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "tree", "all"]
+            },
+            "description": "Get hierarchical category tree"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/menu/list",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "menu", "list"]
+            },
+            "description": "Get categories marked for menu display"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category Articles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/categories/politics/articles?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "politics", "articles"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all articles in a category"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"en\": \"Science\",\n    \"bn\": \"বিজ্ঞান\"\n  },\n  \"description\": {\n    \"en\": \"Science and research news\",\n    \"bn\": \"বিজ্ঞান এবং গবেষণা সংবাদ\"\n  },\n  \"parent\": null,\n  \"order\": 9,\n  \"isActive\": true,\n  \"showInMenu\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Create a new category (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Subcategory (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"en\": \"Cricket\",\n    \"bn\": \"ক্রিকেট\"\n  },\n  \"description\": {\n    \"en\": \"Cricket news and updates\",\n    \"bn\": \"ক্রিকেট সংবাদ এবং আপডেট\"\n  },\n  \"parent\": \"8b919755-4076-42dc-8c5f-3e8329f8f27f\",\n  \"order\": 1,\n  \"isActive\": true,\n  \"showInMenu\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories",
+              "host": ["{{base_url}}"],
+              "path": ["categories"]
+            },
+            "description": "Create a subcategory under Sports"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": {\n    \"en\": \"Politics & Government\",\n    \"bn\": \"রাজনীতি ও সরকার\"\n  },\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/categories/{{category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "{{category_id}}"]
+            },
+            "description": "Update category details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/categories/{{category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "{{category_id}}"]
+            },
+            "description": "Delete a category (Admin only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Articles",
+      "item": [
+        {
+          "name": "Get All Articles (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles?page=1&limit=10&status=published&sort=-publishedAt",
+              "host": ["{{base_url}}"],
+              "path": ["articles"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "published"
+                },
+                {
+                  "key": "sort",
+                  "value": "-publishedAt"
+                }
+              ]
+            },
+            "description": "Get all published articles with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Article by ID/Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/{{article_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "{{article_id}}"]
+            },
+            "description": "Get single article by ID or slug"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Article",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('article_id', response.data.id);",
+                  "    console.log('Article ID saved:', response.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"en\": \"Breaking News: Major Technology Breakthrough Announced\",\n    \"bn\": \"ব্রেকিং নিউজ: প্রযুক্তিতে বড় অগ্রগতির ঘোষণা\"\n  },\n  \"content\": {\n    \"en\": \"In a groundbreaking announcement today, scientists have revealed a major technological breakthrough that promises to revolutionize the industry. This development comes after years of dedicated research and represents a significant milestone in technological advancement.\\n\\nThe new technology addresses several key challenges that have plagued researchers for decades. According to lead scientist Dr. Jane Smith, 'This breakthrough will enable us to solve problems we previously thought impossible.' The implications of this discovery extend far beyond the immediate field, with potential applications in healthcare, communications, and environmental protection.\\n\\nExperts from around the world have praised the achievement, calling it a 'game-changer' that will reshape our understanding of what's possible. The research team consists of over 50 scientists from 15 different countries, demonstrating the power of international collaboration in scientific research.\\n\\nIndustry leaders have already begun exploring practical applications of the new technology. Several major companies have announced partnerships with the research team to develop commercial products based on these findings. Early prototypes are expected to enter testing phases within the next six months.\\n\\nThe breakthrough also has significant environmental implications, potentially reducing energy consumption by up to 40% in certain applications. This aspect has drawn particular attention from environmental organizations and policy makers worldwide.\",\n    \"bn\": \"আজ একটি যুগান্তকারী ঘোষণায়, বিজ্ঞানীরা একটি বড় প্রযুক্তিগত অগ্রগতি প্রকাশ করেছেন যা শিল্পে বিপ্লব ঘটাতে প্রতিশ্রুতিবদ্ধ। এই উন্নয়নটি বছরের পর বছর নিবেদিত গবেষণার পরে এসেছে এবং প্রযুক্তিগত অগ্রগতিতে একটি উল্লেখযোগ্য মাইলফলক প্রতিনিধিত্ব করে।\\n\\nনতুন প্রযুক্তি বেশ কয়েকটি মূল চ্যালেঞ্জ মোকাবেলা করে যা কয়েক দশক ধরে গবেষকদের জর্জরিত করেছে। প্রধান বিজ্ঞানী ডঃ জেন স্মিথের মতে, 'এই অগ্রগতি আমাদের এমন সমস্যা সমাধান করতে সক্ষম করবে যা আমরা আগে অসম্ভব মনে করতাম।' এই আবিষ্কারের প্রভাব তাৎক্ষণিক ক্ষেত্রের বাইরে প্রসারিত, স্বাস্থ্যসেবা, যোগাযোগ এবং পরিবেশ সুরক্ষায় সম্ভাব্য প্রয়োগ সহ।\\n\\nবিশ্বজুড়ে বিশেষজ্ঞরা এই অর্জনের প্রশংসা করেছেন, এটিকে একটি 'গেম-চেঞ্জার' বলে অভিহিত করেছেন যা সম্ভব কী তা আমাদের বোঝার পুনর্নির্মাণ করবে। গবেষণা দলটি 15টি বিভিন্ন দেশের 50 জনেরও বেশি বিজ্ঞানী নিয়ে গঠিত, যা বৈজ্ঞানিক গবেষণায় আন্তর্জাতিক সহযোগিতার শক্তি প্রদর্শন করে।\"\n  },\n  \"excerpt\": {\n    \"en\": \"Scientists announce groundbreaking technological advancement with far-reaching implications for multiple industries.\",\n    \"bn\": \"বিজ্ঞানীরা একাধিক শিল্পের জন্য সুদূরপ্রসারী প্রভাব সহ যুগান্তকারী প্রযুক্তিগত অগ্রগতি ঘোষণা করেছেন।\"\n  },\n  \"category\": \"2f37a40d-3628-4826-b3a4-fd32ef7a6018\",\n  \"featuredImage\": {\n    \"url\": \"https://images.unsplash.com/photo-1518770660439-4636190af475\",\n    \"alt\": {\n      \"en\": \"Modern technology concept\",\n      \"bn\": \"আধুনিক প্রযুক্তি ধারণা\"\n    }\n  },\n  \"tags\": [\n    {\"en\": \"technology\", \"bn\": \"প্রযুক্তি\"},\n    {\"en\": \"innovation\", \"bn\": \"উদ্ভাবন\"},\n    {\"en\": \"science\", \"bn\": \"বিজ্ঞান\"},\n    {\"en\": \"breakthrough\", \"bn\": \"অগ্রগতি\"}\n  ],\n  \"status\": \"published\",\n  \"isFeatured\": true,\n  \"isBreaking\": true,\n  \"allowComments\": true,\n  \"metaTitle\": {\n    \"en\": \"Major Technology Breakthrough - Latest News\",\n    \"bn\": \"প্রধান প্রযুক্তি অগ্রগতি - সর্বশেষ খবর\"\n  },\n  \"metaDescription\": {\n    \"en\": \"Read about the latest technological breakthrough that will revolutionize the industry\",\n    \"bn\": \"সর্বশেষ প্রযুক্তিগত অগ্রগতি সম্পর্কে পড়ুন যা শিল্পে বিপ্লব ঘটাবে\"\n  },\n  \"metaKeywords\": [\"technology\", \"innovation\", \"breakthrough\", \"science\", \"research\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/articles",
+              "host": ["{{base_url}}"],
+              "path": ["articles"]
+            },
+            "description": "Create a new article (requires authentication)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Draft Article",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"en\": \"Upcoming Sports Event Preview\",\n    \"bn\": \"আসন্ন খেলাধুলা ইভেন্ট প্রিভিউ\"\n  },\n  \"content\": {\n    \"en\": \"This is a draft article about the upcoming major sports event...\",\n    \"bn\": \"এটি আসন্ন প্রধান খেলাধুলা ইভেন্ট সম্পর্কে একটি খসড়া নিবন্ধ...\"\n  },\n  \"excerpt\": {\n    \"en\": \"Preview of the biggest sports event of the year\",\n    \"bn\": \"বছরের সবচেয়ে বড় খেলাধুলা ইভেন্টের পূর্বরূপ\"\n  },\n  \"category\": \"8b919755-4076-42dc-8c5f-3e8329f8f27f\",\n  \"status\": \"draft\",\n  \"isFeatured\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/articles",
+              "host": ["{{base_url}}"],
+              "path": ["articles"]
+            },
+            "description": "Create a draft article"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Article",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"en\": \"Breaking News: Major Technology Breakthrough Announced - Updated\",\n    \"bn\": \"ব্রেকিং নিউজ: প্রযুক্তিতে বড় অগ্রগতির ঘোষণা - আপডেট\"\n  },\n  \"isFeatured\": true,\n  \"isBreaking\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/articles/{{article_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "{{article_id}}"]
+            },
+            "description": "Update an existing article"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Article",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/articles/{{article_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "{{article_id}}"]
+            },
+            "description": "Delete an article"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Featured Articles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/featured/list?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "featured", "list"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Get featured articles"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Breaking News",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/breaking/list",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "breaking", "list"]
+            },
+            "description": "Get breaking news articles"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trending Articles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/trending/list?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "trending", "list"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get trending articles"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Latest Articles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/latest/list?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "latest", "list"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get latest published articles"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Articles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/search/query?q=technology&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "search", "query"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "technology"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Search articles by keyword"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Related Articles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles/{{article_id}}/related?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["articles", "{{article_id}}", "related"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Get related articles"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/articles?category=2f37a40d-3628-4826-b3a4-fd32ef7a6018&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["articles"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "2f37a40d-3628-4826-b3a4-fd32ef7a6018"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Filter articles by category ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all users (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            },
+            "description": "Get user details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@newsportal.com\",\n  \"password\": \"Journalist@123\",\n  \"role\": \"journalist\",\n  \"phone\": \"+8801812345678\",\n  \"bio\": \"Senior Technology Reporter\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            },
+            "description": "Create a new user (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith Updated\",\n  \"role\": \"admin\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            },
+            "description": "Update user details"
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{user_id}}"]
+            },
+            "description": "Deactivate user (soft delete)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/stats",
+              "host": ["{{base_url}}"],
+              "path": ["users", "stats"]
+            },
+            "description": "Get user statistics"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Users by Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?role=journalist",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "journalist"
+                }
+              ]
+            },
+            "description": "Filter users by role"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?search=jane",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "jane"
+                }
+              ]
+            },
+            "description": "Search users by name or email"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Media",
+      "item": [
+        {
+          "name": "Upload Single File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "folder",
+                  "value": "articles",
+                  "type": "text"
+                },
+                {
+                  "key": "alt[en]",
+                  "value": "Sample image",
+                  "type": "text"
+                },
+                {
+                  "key": "alt[bn]",
+                  "value": "নমুনা ছবি",
+                  "type": "text"
+                },
+                {
+                  "key": "caption[en]",
+                  "value": "This is a sample image",
+                  "type": "text"
+                },
+                {
+                  "key": "caption[bn]",
+                  "value": "এটি একটি নমুনা ছবি",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/media/upload",
+              "host": ["{{base_url}}"],
+              "path": ["media", "upload"]
+            },
+            "description": "Upload a single file"
+          },
+          "response": []
+        },
+        {
+          "name": "Upload Multiple Files",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "folder",
+                  "value": "gallery",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/media/upload/multiple",
+              "host": ["{{base_url}}"],
+              "path": ["media", "upload", "multiple"]
+            },
+            "description": "Upload multiple files at once"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Media",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/media?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["media"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all media files"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Media by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/media/MEDIA_ID",
+              "host": ["{{base_url}}"],
+              "path": ["media", "MEDIA_ID"]
+            },
+            "description": "Get single media file details"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Media by Type",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/media?type=image",
+              "host": ["{{base_url}}"],
+              "path": ["media"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "image"
+                }
+              ]
+            },
+            "description": "Filter media by type (image/video/document)"
+          },
+          "response": []
+        },
+        {
+          "name": "Filter Media by Folder",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/media?folder=articles",
+              "host": ["{{base_url}}"],
+              "path": ["media"],
+              "query": [
+                {
+                  "key": "folder",
+                  "value": "articles"
+                }
+              ]
+            },
+            "description": "Filter media by folder"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Media Metadata",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alt\": {\n    \"en\": \"Updated alt text\",\n    \"bn\": \"আপডেট করা alt টেক্সট\"\n  },\n  \"caption\": {\n    \"en\": \"Updated caption\",\n    \"bn\": \"আপডেট করা ক্যাপশন\"\n  },\n  \"tags\": [\"updated\", \"image\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/media/MEDIA_ID",
+              "host": ["{{base_url}}"],
+              "path": ["media", "MEDIA_ID"]
+            },
+            "description": "Update media metadata"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Media",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/media/MEDIA_ID",
+              "host": ["{{base_url}}"],
+              "path": ["media", "MEDIA_ID"]
+            },
+            "description": "Delete a media file"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Advertisements",
+      "item": [
+        {
+          "name": "Get All Ads (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/advertisements?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get all advertisements (Admin)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Ads (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/advertisements/active?type=banner&position=top",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements", "active"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "banner"
+                },
+                {
+                  "key": "position",
+                  "value": "top"
+                }
+              ]
+            },
+            "description": "Get active advertisements (Public)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Advertisement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Homepage Top Banner\",\n  \"title\": {\n    \"en\": \"Special Offer - 50% Off\",\n    \"bn\": \"বিশেষ অফার - ৫০% ছাড়\"\n  },\n  \"description\": {\n    \"en\": \"Limited time offer on all products\",\n    \"bn\": \"সমস্ত পণ্যে সীমিত সময়ের অফার\"\n  },\n  \"type\": \"banner\",\n  \"position\": \"top\",\n  \"image\": {\n    \"url\": \"https://via.placeholder.com/728x90\",\n    \"alt\": {\n      \"en\": \"Advertisement banner\",\n      \"bn\": \"বিজ্ঞাপন ব্যানার\"\n    }\n  },\n  \"linkUrl\": \"https://example.com/offer\",\n  \"openInNewTab\": true,\n  \"startDate\": \"2024-01-01T00:00:00Z\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"isActive\": true,\n  \"priority\": 1,\n  \"displayPages\": [\"home\", \"all\"],\n  \"client\": \"Example Company\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/advertisements",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements"]
+            },
+            "description": "Create a new advertisement"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Advertisement",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false,\n  \"priority\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/advertisements/AD_ID",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements", "AD_ID"]
+            },
+            "description": "Update advertisement"
+          },
+          "response": []
+        },
+        {
+          "name": "Track Impression",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/advertisements/AD_ID/impression",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements", "AD_ID", "impression"]
+            },
+            "description": "Track advertisement impression"
+          },
+          "response": []
+        },
+        {
+          "name": "Track Click",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/advertisements/AD_ID/click",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements", "AD_ID", "click"]
+            },
+            "description": "Track advertisement click"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Advertisement",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/advertisements/AD_ID",
+              "host": ["{{base_url}}"],
+              "path": ["advertisements", "AD_ID"]
+            },
+            "description": "Delete an advertisement"
+          },
+          "response": []
         }
       ]
     },
@@ -109,12 +1349,156 @@
       "name": "Dashboard",
       "item": [
         {
-          "name": "Get Overview Stats",
+          "name": "Get Overview Statistics",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
-            "url": "{{base_url}}/dashboard/overview"
-          }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard/overview",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "overview"]
+            },
+            "description": "Get dashboard overview statistics (Admin only)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Article Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard/articles/stats?startDate=2024-01-01&endDate=2024-12-31",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "articles", "stats"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-12-31"
+                }
+              ]
+            },
+            "description": "Get article statistics by date range"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Top Articles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard/articles/top?limit=10&days=30",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "articles", "top"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Get top performing articles"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category Distribution",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard/categories/distribution",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "categories", "distribution"]
+            },
+            "description": "Get article distribution by category"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Activity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard/users/activity?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "users", "activity"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Get user activity statistics"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Traffic Trends",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/dashboard/traffic/trends?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "traffic", "trends"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Get traffic trends"
+          },
+          "response": []
         }
       ]
     }

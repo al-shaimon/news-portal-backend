@@ -28,7 +28,7 @@ router.use(protect);
 router.use(restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN));
 
 router.post('/', createCategoryValidation, validate, categoryController.createCategory);
-router.put('/:id', updateCategoryValidation, validate, categoryController.updateCategory);
-router.delete('/:id', categoryIdValidation, validate, categoryController.deleteCategory);
+router.put('/:identifier', updateCategoryValidation, validate, categoryController.updateCategory);
+router.delete('/:identifier', categoryIdValidation, validate, categoryController.deleteCategory);
 
 export default router;
