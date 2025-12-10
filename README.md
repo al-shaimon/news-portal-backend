@@ -347,219 +347,131 @@ Run seeder inside container:
 docker compose exec app npm run seed
 ```
 
-The API will be available at: `http://localhost:5000`
+The API will be available on `http://localhost:5000` (or the port you set via `PORT`).
 
-## 📡 API Endpoints
+### Local-Only Docker Stack
 
-Complete API documentation: See `API_DOCUMENTATION.md`
+If you just want to spin up the backend plus a database for local development/testing, use the lightweight `Dockerfile.local` + `docker-compose.local.yml` combo:
 
-### Quick Reference
+1. Create/update your `.env` file (same vars as the non-docker workflow). When running commands **on the host**, Prisma should point at `postgresql://news_portal_user:d123@localhost:5434/news_portal?schema=public`. The container automatically overrides this to talk to `backend-db` internally.
+2. Start the stack:
 
-#### Authentication (`/api/v1/auth`)
+   ```bash
+   docker compose -f docker-compose.local.yml up --build
+   ```
 
-| Method | Endpoint           | Description          | Auth |
-| ------ | ------------------ | -------------------- | ---- |
-| POST   | `/register`        | Register new user    | ❌   |
-| POST   | `/login`           | User login           | ❌   |
-| POST   | `/refresh-token`   | Refresh access token | ❌   |
-| POST   | `/logout`          | User logout          | ✅   |
-| GET    | `/me`              | Get current user     | ✅   |
-| PUT    | `/change-password` | Change password      | ✅   |
+   - API lives on `http://localhost:5000` (override with `PORT` in `.env`).
+   - Postgres is forwarded to `localhost:5434`.
+   - The codebase is bind-mounted into the container and `npm run dev` is used, so changes on the host hot-reload automatically.
+   - On the first boot the container runs `npm ci`, `prisma generate`, and `prisma migrate deploy` before starting.
 
-#### Users (`/api/v1/users`)
+3. (Optional) Seed the DB once it is healthy:
 
-| Method | Endpoint       | Description          | Auth | Role   |
-| ------ | -------------- | -------------------- | ---- | ------ |
-| GET    | `/`            | List all users       | ✅   | Admin+ |
-| GET    | `/:identifier` | Get user by ID/email | ✅   | Admin+ |
-| POST   | `/`            | Create new user      | ✅   | Admin+ |
-| PUT    | `/:id`         | Update user          | ✅   | Admin+ |
-| DELETE | `/:id`         | Delete user          | ✅   | Admin+ |
+   ```bash
+   docker compose -f docker-compose.local.yml exec backend-app npm run seed
+   ```
 
-#### Categories (`/api/v1/categories`)
+To stop everything: `docker compose -f docker-compose.local.yml down` (add `-v` if you want to drop the Postgres/node_modules volumes).
 
-| Method | Endpoint       | Description            | Auth | Role   |
-| ------ | -------------- | ---------------------- | ---- | ------ |
-| GET    | `/`            | List categories        | ❌   | Public |
-| GET    | `/:identifier` | Get category (ID/slug) | ❌   | Public |
-| POST   | `/`            | Create category        | ✅   | Admin+ |
-| PUT    | `/:identifier` | Update category        | ✅   | Admin+ |
-| DELETE | `/:identifier` | Delete category        | ✅   | Admin+ |
+## API Endpoints
 
-**Query Parameters:**
+### Authentication
 
-- `parent` - Filter by parent ID (use "null" for root categories)
-- `active` - Filter by active status (true/false)
-- `menu` - Show only menu categories (true/false)
-- `search` - Search in names and descriptions
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - Login user
+- `POST /api/v1/auth/refresh-token` - Refresh access token
+- `POST /api/v1/auth/logout` - Logout user
+- `GET /api/v1/auth/me` - Get current user
+- `PUT /api/v1/auth/change-password` - Change password
+- `PUT /api/v1/auth/profile` - Update profile
 
-#### Articles (`/api/v1/articles`)
+### Users (Admin Only)
 
-| Method | Endpoint       | Description           | Auth | Role          |
-| ------ | -------------- | --------------------- | ---- | ------------- |
-| GET    | `/`            | List articles         | ❌   | Public        |
-| GET    | `/featured`    | Get featured articles | ❌   | Public        |
-| GET    | `/breaking`    | Get breaking news     | ❌   | Public        |
-| GET    | `/trending`    | Get trending articles | ❌   | Public        |
-| GET    | `/:identifier` | Get article (ID/slug) | ❌   | Public        |
-| POST   | `/`            | Create article        | ✅   | Journalist+   |
-| PUT    | `/:id`         | Update article        | ✅   | Author/Admin+ |
-| DELETE | `/:id`         | Delete article        | ✅   | Author/Admin+ |
+- `GET /api/v1/users` - Get all users
+- `GET /api/v1/users/:id` - Get user by ID
+- `POST /api/v1/users` - Create user
+- `PUT /api/v1/users/:id` - Update user
+- `DELETE /api/v1/users/:id` - Delete user
+- `GET /api/v1/users/stats` - Get user statistics
 
-**Query Parameters:**
+### Articles
 
-- `status` - Filter by status (draft/published/archived/scheduled)
-- `category` - Filter by category ID
-- `author` - Filter by author ID
-- `featured` - Featured only (true/false)
-- `breaking` - Breaking news only (true/false)
-- `trending` - Trending only (true/false)
-- `search` - Search in title and content
-- `sort` - Sort by field (publishedAt, views, likes, createdAt)
-- `order` - Sort order (asc/desc)
-- `page` - Page number (default: 1)
-- `limit` - Items per page (default: 10)
+- `GET /api/v1/articles` - Get all articles (public)
+- `GET /api/v1/articles/:identifier` - Get single article
+- `POST /api/v1/articles` - Create article (Auth required)
+- `PUT /api/v1/articles/:id` - Update article (Auth required)
+- `DELETE /api/v1/articles/:id` - Delete article (Auth required)
+- `GET /api/v1/articles/featured/list` - Get featured articles
+- `GET /api/v1/articles/breaking/list` - Get breaking news
+- `GET /api/v1/articles/trending/list` - Get trending articles
+- `GET /api/v1/articles/latest/list` - Get latest articles
+- `GET /api/v1/articles/search/query` - Search articles
+- `GET /api/v1/articles/:id/related` - Get related articles
 
-#### Advertisements (`/api/v1/advertisements`)
+### Categories
 
-| Method | Endpoint  | Description    | Auth | Role   |
-| ------ | --------- | -------------- | ---- | ------ |
-| GET    | `/`       | List all ads   | ✅   | Admin+ |
-| GET    | `/active` | Get active ads | ❌   | Public |
-| GET    | `/:id`    | Get ad by ID   | ✅   | Admin+ |
-| POST   | `/`       | Create ad      | ✅   | Admin+ |
-| PUT    | `/:id`    | Update ad      | ✅   | Admin+ |
-| DELETE | `/:id`    | Delete ad      | ✅   | Admin+ |
+- `GET /api/v1/categories` - Get all categories
+- `GET /api/v1/categories/:identifier` - Get single category
+- `POST /api/v1/categories` - Create category (Admin)
+- `PUT /api/v1/categories/:id` - Update category (Admin)
+- `DELETE /api/v1/categories/:id` - Delete category (Admin)
+- `GET /api/v1/categories/tree/all` - Get category tree
+- `GET /api/v1/categories/menu/list` - Get menu categories
+- `GET /api/v1/categories/:identifier/articles` - Get category articles
 
-**Active Ads Query Parameters:**
+### Advertisements
 
-- `type` - Filter by ad type (banner/sidebar/in_content/popup)
-- `position` - Filter by position (top/middle/bottom/sidebar\_\*)
-- `page` - Filter by display page
+- `GET /api/v1/advertisements` - Get all ads (Admin)
+- `GET /api/v1/advertisements/active` - Get active ads (Public)
+- `GET /api/v1/advertisements/:id` - Get single ad (Admin)
+- `POST /api/v1/advertisements` - Create ad (Admin)
+- `PUT /api/v1/advertisements/:id` - Update ad (Admin)
+- `DELETE /api/v1/advertisements/:id` - Delete ad (Admin)
+- `POST /api/v1/advertisements/:id/impression` - Track impression
+- `POST /api/v1/advertisements/:id/click` - Track click
 
-#### Media (`/api/v1/media`)
+### Media
 
-| Method | Endpoint  | Description           | Auth | Role            |
-| ------ | --------- | --------------------- | ---- | --------------- |
-| GET    | `/`       | List media files      | ✅   | Any             |
-| GET    | `/:id`    | Get media by ID       | ✅   | Any             |
-| POST   | `/upload` | Upload file           | ✅   | Journalist+     |
-| PUT    | `/:id`    | Update media metadata | ✅   | Uploader/Admin+ |
-| DELETE | `/:id`    | Delete media          | ✅   | Uploader/Admin+ |
+- `GET /api/v1/media` - Get all media (Auth required)
+- `GET /api/v1/media/:id` - Get single media
+- `POST /api/v1/media/upload` - Upload single file
+- `POST /api/v1/media/upload/multiple` - Upload multiple files
+- `PUT /api/v1/media/:id` - Update media metadata
+- `DELETE /api/v1/media/:id` - Delete media
 
-**Query Parameters:**
+### Dashboard (Admin Only)
 
-- `type` - Filter by type (image/video/document)
-- `folder` - Filter by folder
-- `search` - Search in filename and captions
+- `GET /api/v1/dashboard/overview` - Get overview statistics
+- `GET /api/v1/dashboard/articles/stats` - Get article statistics
+- `GET /api/v1/dashboard/articles/top` - Get top articles
+- `GET /api/v1/dashboard/categories/distribution` - Category distribution
+- `GET /api/v1/dashboard/users/activity` - User activity
+- `GET /api/v1/dashboard/traffic/trends` - Traffic trends
 
-#### Dashboard (`/api/v1/dashboard`)
+## Default Credentials
 
-| Method | Endpoint | Description    | Auth | Role   |
-| ------ | -------- | -------------- | ---- | ------ |
-| GET    | `/stats` | Get statistics | ✅   | Admin+ |
+After running the seeder:
 
-**Returns:**
+- **Email**: admin@newsportal.com
+- **Password**: Admin@12345
 
-- User counts (total, by role, active)
-- Article counts (total, by status, views/likes/shares)
-- Category counts
-- Media counts (by type, total size)
-- Advertisement metrics (impressions, clicks)
+⚠️ **IMPORTANT**: Change the password after first login!
 
-## 🔐 Authentication
+## Security Features
 
-The API uses JWT (JSON Web Tokens) for authentication.
+- JWT authentication with refresh tokens
+- Password hashing with bcrypt
+- Role-based access control (RBAC)
+- Input validation and sanitization
+- Rate limiting
+- CORS protection
+- Helmet security headers
+- Prisma-powered SQL injection protection
+- XSS protection
 
-### Login Flow
+## Development
 
-1. **Login**: POST `/api/v1/auth/login` with email and password
-2. **Receive Token**: Get access token and refresh token
-3. **Use Token**: Include in `Authorization` header: `Bearer <token>`
-4. **Refresh**: Use refresh token to get new access token when expired
-
-### Example Authentication
-
-```bash
-# Login
-curl -X POST http://localhost:5000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@newsportal.com","password":"Admin@12345"}'
-
-# Response
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "user": { ... },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "..."
-  }
-}
-
-# Use token in requests
-curl http://localhost:5000/api/v1/users \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-
-## 🧪 Testing
-
-### Postman Collection
-
-A complete Postman collection with example requests is included: `postman_collection.json`
-
-**Features:**
-
-- Pre-configured environment variables
-- Auto-save authentication tokens
-- Example payloads for all endpoints
-- Test data based on seeded database
-
-**Import into Postman:**
-
-1. Open Postman
-2. Click "Import"
-3. Select `postman_collection.json`
-4. Set environment variable `base_url` to `http://localhost:5000`
-
-### Manual Testing Examples
-
-#### Create Category
-
-```bash
-curl -X POST http://localhost:5000/api/v1/categories \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nameEn": "Technology",
-    "nameBn": "প্রযুক্তি",
-    "descriptionEn": "Tech news and updates",
-    "descriptionBn": "প্রযুক্তি সংবাদ এবং আপডেট"
-  }'
-```
-
-#### Create Article
-
-```bash
-curl -X POST http://localhost:5000/api/v1/articles \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": {
-      "en": "Breaking Tech News",
-      "bn": "প্রযুক্তি সংবাদ"
-    },
-    "content": {
-      "en": "Full article content here...",
-      "bn": "সম্পূর্ণ নিবন্ধ বিষয়বস্তু এখানে..."
-    },
-    "categoryId": "<category-uuid>",
-    "status": "published",
-    "isFeatured": true
-  }'
-```
-
-#### Get Active Advertisements
+### Running in Development Mode
 
 ```bash
 curl http://localhost:5000/api/v1/advertisements/active?type=banner&position=top

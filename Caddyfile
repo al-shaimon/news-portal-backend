@@ -2,7 +2,12 @@
   email {$EMAIL}
 }
 
-{$DOMAIN} {
+backoffice.thecontemporary.news {
   encode gzip
   reverse_proxy app:5000
+}
+
+thecontemporary.news {
+  encode gzip
+  reverse_proxy 127.0.0.1:3000
 }
