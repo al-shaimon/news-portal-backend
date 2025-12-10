@@ -1,8 +1,8 @@
 {
-  email {env.EMAIL}
+  email {$EMAIL}
 }
 
-{env.DOMAIN} {
-  encoder gzip
+{$DOMAIN} {
+  encode gzip
   reverse_proxy app:5000
 }

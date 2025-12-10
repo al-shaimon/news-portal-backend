@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: news_portal_user
+      POSTGRES_PASSWORD: news_portal_password
+      POSTGRES_DB: news_portal
+    ports:
+      - "5432:5432"
+    volumes:
+      - local-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U news_portal_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://news_portal_user:news_portal_password@db:5432/news_portal?schema=public
+      NODE_ENV: development
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: >
+      sh -c "npm ci &&
+             npx prisma generate &&
+             npx prisma migrate deploy &&
+             npm run dev"
+
+volumes:
+  local-postgres-data:
