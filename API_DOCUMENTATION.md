@@ -341,6 +341,56 @@ Authorization: Bearer <token>
 }
 ```
 
+## Analytics Endpoints (Admin)
+
+### Realtime Snapshot
+```
+GET /analytics/realtime
+```
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "activeUsers": 3,
+    "pageViewsPerMinute": 12,
+    "topPages": [
+      { "path": "/articles/example-article", "views": 420 }
+    ],
+    "referrers": [
+      { "source": "google", "sessions": 30 },
+      { "source": "facebook", "sessions": 20 }
+    ]
+  }
+}
+```
+
+### Traffic Trend
+```
+GET /analytics/traffic?window=24h&interval=1h
+```
+
+### Content Performance
+```
+GET /analytics/content?limit=10&sort=views&order=desc
+```
+
+### Advertisement Performance
+```
+GET /analytics/ads/summary?window=7d
+GET /analytics/ads/top?limit=10&sort=ctr
+```
+
+### Media Usage
+```
+GET /analytics/media/summary
+```
+
+### Auth / Session Stats
+```
+GET /analytics/auth?window=7d
+```
+
 ## Error Codes
 
 | Status Code | Description           |
