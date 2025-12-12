@@ -32,11 +32,17 @@ const app = express();
 await connectDB();
 
 // Security Middleware
-app.use(helmet()); // Set security HTTP headers
+// Configure Helmet to allow CORS
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  })
+);
 app.use(mongoSanitize()); // Sanitize data against NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
-// CORS Configuration
+// CORS Configuration - MUST be before other routes
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',

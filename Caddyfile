@@ -3,6 +3,47 @@
 }
 
 {env.DOMAIN} {
-  encoder gzip
-  reverse_proxy app:5000
+  # Enable GZIP compression
+  encode gzip
+  
+  # Handle CORS for multiple origins
+  @cors_preflight {
+    method OPTIONS
+  }
+  
+  # Match allowed origins (both www and non-www)
+  @allowed_origin {
+    header Origin https://thecontemporary.news
+  }
+  @allowed_origin_www {
+    header Origin https://www.thecontemporary.news
+  }
+  
+  # Set CORS headers for allowed origins
+  header @allowed_origin Access-Control-Allow-Origin "https://thecontemporary.news"
+  header @allowed_origin_www Access-Control-Allow-Origin "https://www.thecontemporary.news"
+  
+  # Set other CORS headers for all requests
+  header {
+    Access-Control-Allow-Credentials "true"
+    Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+    Access-Control-Expose-Headers "Content-Range, X-Content-Range"
+    Access-Control-Max-Age "86400"
+    -Server
+  }
+  
+  # Respond to preflight requests
+  respond @cors_preflight 204
+  
+  # Reverse proxy to backend app
+  reverse_proxy app:5000 {
+    # Preserve original request headers
+    header_up Host {host}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+    header_up Origin {header.Origin}
+  }
 }
