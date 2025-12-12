@@ -660,6 +660,9 @@ pm2 startup
 | ------------------------- | ------------------------------------------ |
 | `README.md`               | Complete setup and usage guide (this file) |
 | `API_DOCUMENTATION.md`    | Detailed API endpoint documentation        |
+| `DATABASE_SCHEMA.md`      | Database schema with ER diagrams           |
+| `ARTICLE_SEEDING.md`      | Article seeding guide                      |
+| `CORS_FIX.md`             | CORS configuration and troubleshooting     |
 | `postman_collection.json` | Postman collection for API testing         |
 
 ## 🤝 Contributing
