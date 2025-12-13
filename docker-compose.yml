@@ -42,3 +42,4 @@ volumes:
 networks:
   newsportal-backend-net:
     driver: bridge
+    attachable: true
