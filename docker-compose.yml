@@ -28,36 +28,15 @@ services:
     environment:
       DATABASE_URL: postgresql://news_portal_user:d123@backend-db:5432/news_portal?schema=public
       NODE_ENV: production
-    expose:
-      - '5000'
+    ports:
+      - '5000:5000'
     command: >
       sh -c "npx prisma migrate deploy && node src/server.js"
     networks:
       - newsportal-backend-net
 
-  caddy:
-    image: caddy:2-alpine
-    restart: always
-    depends_on:
-      app:
-        condition: service_started
-    ports:
-      - '80:80'
-      - '443:443'
-    environment:
-      DOMAIN: ${BACKEND_DOMAIN:-backoffice.thecontemporary.news}
-      EMAIL: ${CADDY_EMAIL:-admin@thecontemporary.news}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy-data:/data
-      - caddy-config:/config
-    networks:
-      - newsportal-backend-net
-
 volumes:
   backend-postgres-data:
-  caddy-data:
-  caddy-config:
 
 networks:
   newsportal-backend-net:
