@@ -29,6 +29,9 @@ dotenv.config();
 // Initialize express app
 const app = express();
 
+// Behind Caddy/Nginx we need to trust the proxy so Express rate limiting sees the real client IP
+app.set('trust proxy', 1);
+
 // Connect to database
 await connectDB();
 
