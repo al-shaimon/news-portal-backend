@@ -26,7 +26,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://news_portal_user:d123@backend-db:5432/news_portal?schema=public
+      # Use the explicit container_name so DNS resolution is guaranteed even if Docker doesn't create the service alias
+      DATABASE_URL: postgresql://news_portal_user:d123@newsportal-backend-db:5432/news_portal?schema=public
       NODE_ENV: production
     ports:
       - '5000:5000'
