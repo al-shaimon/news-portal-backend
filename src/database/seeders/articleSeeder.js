@@ -17,18 +17,18 @@ const seedArticles = async () => {
 
     console.log('📰 Starting article seeding...\n');
 
-    // Find an author (super_admin, admin, or journalist)
+    // Find an author (super_admin, admin, or editorial)
     const author = await prisma.user.findFirst({
       where: {
         role: {
-          in: [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.JOURNALIST],
+          in: [USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.EDITORIAL],
         },
       },
     });
 
     if (!author) {
-      console.error('❌ Error: No admin or journalist user found!');
-      console.log('ℹ️  Please create at least one admin or journalist user first\n');
+      console.error('❌ Error: No admin or editorial user found!');
+      console.log('ℹ️  Please create at least one admin or editorial user first\n');
       process.exit(1);
     }
 

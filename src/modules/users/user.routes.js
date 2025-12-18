@@ -13,16 +13,16 @@ router.use(protect);
 // Get user stats - must be before /:id to avoid route conflict
 router.get(
   '/stats',
-  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
+  restrictTo(USER_ROLES.SUPER_ADMIN),
   userController.getUserStats
 );
 
-// Admin and Super Admin routes
+// Super Admin routes
 router
   .route('/')
-  .get(restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN), userController.getAllUsers)
+  .get(restrictTo(USER_ROLES.SUPER_ADMIN), userController.getAllUsers)
   .post(
-    restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
+    restrictTo(USER_ROLES.SUPER_ADMIN),
     createUserValidation,
     validate,
     userController.createUser
@@ -31,19 +31,19 @@ router
 router
   .route('/:id')
   .get(
-    restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
+    restrictTo(USER_ROLES.SUPER_ADMIN),
     userIdValidation,
     validate,
     userController.getUserById
   )
   .put(
-    restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
+    restrictTo(USER_ROLES.SUPER_ADMIN),
     updateUserValidation,
     validate,
     userController.updateUser
   )
   .delete(
-    restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
+    restrictTo(USER_ROLES.SUPER_ADMIN),
     userIdValidation,
     validate,
     userController.deleteUser

@@ -1,6 +1,6 @@
 import express from 'express';
 import articleController from './article.controller.js';
-import { protect, optionalAuth, restrictTo, checkPermission } from '../../middleware/auth.js';
+import { protect, optionalAuth, restrictTo } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
   createArticleValidation,
@@ -8,7 +8,7 @@ import {
   articleIdentifierValidation,
   articleIdParamValidation,
 } from './article.validation.js';
-import { USER_ROLES, PERMISSIONS } from '../../config/constants.js';
+import { USER_ROLES } from '../../config/constants.js';
 
 const router = express.Router();
 
@@ -43,7 +43,7 @@ router.use(protect);
 
 router.post(
   '/',
-  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.JOURNALIST),
+  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.EDITORIAL),
   createArticleValidation,
   validate,
   articleController.createArticle
@@ -51,7 +51,7 @@ router.post(
 
 router.put(
   '/:id',
-  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.JOURNALIST),
+  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.EDITORIAL),
   updateArticleValidation,
   validate,
   articleController.updateArticle
@@ -59,7 +59,7 @@ router.put(
 
 router.delete(
   '/:id',
-  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.JOURNALIST),
+  restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN),
   articleIdParamValidation,
   validate,
   articleController.deleteArticle

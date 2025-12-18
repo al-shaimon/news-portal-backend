@@ -24,7 +24,7 @@ class AuthService {
 
   // Register new user
   async register(userData) {
-    const { email, password, name, role } = userData;
+    const { email, password, name } = userData;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -37,7 +37,7 @@ class AuthService {
         name,
         email,
         password: hashedPassword,
-        role: role || USER_ROLES.READER,
+        role: USER_ROLES.EDITORIAL,
       },
     });
 
@@ -178,25 +178,48 @@ class AuthService {
 
   // Update profile
   async updateProfile(userId, updates) {
-    const allowedUpdates = ['name', 'phone', 'bio', 'avatar'];
-    const filteredUpdates = {};
+    const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!existingUser) {
+      throw new AppError('User not found', 404);
+    }
 
-    Object.keys(updates).forEach((key) => {
-      if (allowedUpdates.includes(key)) {
+    const roleAllowedUpdates = {
+      [USER_ROLES.SUPER_ADMIN]: ['name', 'phone', 'bio', 'avatar', 'email'],
+      [USER_ROLES.ADMIN]: ['email'],
+      [USER_ROLES.EDITORIAL]: ['email'],
+    };
+
+    const allowedUpdates = roleAllowedUpdates[existingUser.role] || [];
+    const requestedKeys = Object.keys(updates || {});
+    const forbiddenKeys = requestedKeys.filter((key) => !allowedUpdates.includes(key));
+
+    if (forbiddenKeys.length > 0) {
+      throw new AppError(
+        `You can only update the following fields: ${allowedUpdates.join(', ') || 'none'}`,
+        403
+      );
+    }
+
+    const filteredUpdates = {};
+    allowedUpdates.forEach((key) => {
+      if (updates[key] !== undefined) {
         filteredUpdates[key] = updates[key];
       }
     });
 
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: filteredUpdates,
-    });
+    try {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: filteredUpdates,
+      });
 
-    if (!user) {
-      throw new AppError('User not found', 404);
+      return this.sanitizeUser(user);
+    } catch (error) {
+      if (error?.code === 'P2002') {
+        throw new AppError('Email already exists', 400);
+      }
+      throw error;
     }
-
-    return this.sanitizeUser(user);
   }
 }
 

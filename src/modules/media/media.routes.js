@@ -11,6 +11,9 @@ const router = express.Router();
 // All routes require authentication
 router.use(protect);
 
+// Media library access should be restricted to CMS users
+router.use(restrictTo(USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN, USER_ROLES.EDITORIAL));
+
 // Stats route (Admin only)
 router.get(
   '/stats/overview',

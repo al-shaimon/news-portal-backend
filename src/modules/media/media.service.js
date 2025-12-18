@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { prisma } from '../../config/database.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { getPaginationParams, buildSortObject } from '../../utils/queryUtils.js';
+import { USER_ROLES } from '../../config/constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,7 +84,7 @@ class MediaService {
 
     const where = {};
 
-    if (!['admin', 'super_admin'].includes(userRole)) {
+    if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(userRole)) {
       where.uploadedById = userId;
     }
 
@@ -185,7 +186,7 @@ class MediaService {
       throw new AppError('Media file not found', 404);
     }
 
-    if (!['admin', 'super_admin'].includes(userRole) && media.uploadedById !== userId) {
+    if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(userRole) && media.uploadedById !== userId) {
       throw new AppError('You do not have permission to update this media', 403);
     }
 
@@ -229,7 +230,7 @@ class MediaService {
       throw new AppError('Media file not found', 404);
     }
 
-    if (!['admin', 'super_admin'].includes(userRole) && media.uploadedById !== userId) {
+    if (![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(userRole) && media.uploadedById !== userId) {
       throw new AppError('You do not have permission to delete this media', 403);
     }
 

@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import connectDB, { prisma } from '../../config/database.js';
 import { USER_ROLES } from '../../config/constants.js';
 
@@ -11,36 +12,83 @@ const seedAdmin = async () => {
 
     console.log('🌱 Starting database seeding...\n');
 
-    const existingSuperAdmin = await prisma.user.findFirst({
-      where: { role: USER_ROLES.SUPER_ADMIN },
-    });
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    if (existingSuperAdmin) {
-      console.log('✅ Super Admin already exists:', existingSuperAdmin.email);
-      console.log('ℹ️  Use this email and password to login\n');
-      process.exit(0);
-    }
+    const generatePassword = () => crypto.randomBytes(24).toString('base64url');
 
-    const password = process.env.SUPER_ADMIN_PASSWORD || 'Admin@12345';
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const ensureUserForRole = async ({ role, envPrefix, defaultName, defaultEmail }) => {
+      const existing = await prisma.user.findFirst({ where: { role } });
+      if (existing) {
+        return { role, email: existing.email, password: null, created: false };
+      }
 
-    const superAdmin = await prisma.user.create({
-      data: {
-        name: process.env.SUPER_ADMIN_NAME || 'Super Admin',
-        email: process.env.SUPER_ADMIN_EMAIL || 'admin@newsportal.com',
-        password: hashedPassword,
+      const name = process.env[`${envPrefix}_NAME`] || defaultName;
+      const email = process.env[`${envPrefix}_EMAIL`] || defaultEmail;
+      const passwordFromEnv = process.env[`${envPrefix}_PASSWORD`];
+
+      if (isProduction && !passwordFromEnv) {
+        throw new Error(
+          `Missing ${envPrefix}_PASSWORD. Refusing to seed privileged accounts in production without explicit passwords.`
+        );
+      }
+
+      const password = passwordFromEnv || generatePassword();
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role,
+          isActive: true,
+          isEmailVerified: true,
+        },
+      });
+
+      return { role: user.role, email: user.email, password, created: true };
+    };
+
+    const seededUsers = [];
+    seededUsers.push(
+      await ensureUserForRole({
         role: USER_ROLES.SUPER_ADMIN,
-        isActive: true,
-        isEmailVerified: true,
-      },
-    });
+        envPrefix: 'SUPER_ADMIN',
+        defaultName: 'Super Admin',
+        defaultEmail: 'admin@newsportal.com',
+      })
+    );
+    seededUsers.push(
+      await ensureUserForRole({
+        role: USER_ROLES.ADMIN,
+        envPrefix: 'ADMIN',
+        defaultName: 'Admin',
+        defaultEmail: 'admin.staff@newsportal.com',
+      })
+    );
+    seededUsers.push(
+      await ensureUserForRole({
+        role: USER_ROLES.EDITORIAL,
+        envPrefix: 'EDITORIAL',
+        defaultName: 'Editorial',
+        defaultEmail: 'editorial@newsportal.com',
+      })
+    );
 
-    console.log('✅ Super Admin created successfully!');
+    console.log('✅ Seed users summary');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧 Email:', superAdmin.email);
-    console.log('🔑 Password:', password);
-    console.log('👤 Role:', superAdmin.role);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    seededUsers.forEach((u) => {
+      const status = u.created ? 'created' : 'exists';
+      console.log(`👤 ${u.role} (${status})`);
+      console.log(`📧 Email: ${u.email}`);
+      if (!isProduction && u.password) {
+        console.log(`🔑 Password: ${u.password}`);
+      } else if (isProduction) {
+        console.log('🔑 Password: (set via env)');
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    });
+    console.log('');
 
     const categories = [
       {
@@ -120,7 +168,9 @@ const seedAdmin = async () => {
 
     console.log(`✅ ${categories.length} default categories created\n`);
     console.log('🎉 Database seeding completed successfully!');
-    console.log('⚠️  IMPORTANT: Change the super admin password after first login!\n');
+    if (!isProduction) {
+      console.log('⚠️  IMPORTANT: Change these seeded passwords after first login!\n');
+    }
 
     process.exit(0);
   } catch (error) {

@@ -144,11 +144,23 @@ class ArticleService {
 
     const where = {};
 
-    if (!user || ![USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
+    if (!user) {
       where.status = ARTICLE_STATUS.PUBLISHED;
       where.publishedAt = { lte: new Date() };
-    } else if (query.status) {
-      where.status = query.status;
+    } else if ([USER_ROLES.ADMIN, USER_ROLES.SUPER_ADMIN].includes(user.role)) {
+      if (query.status) {
+        where.status = query.status;
+      }
+    } else if (user.role === USER_ROLES.EDITORIAL) {
+      // Editorial users can access their own articles in the CMS (drafts included)
+      where.authorId = user.id;
+      if (query.status) {
+        where.status = query.status;
+      }
+    } else {
+      // Default fallback: only published content
+      where.status = ARTICLE_STATUS.PUBLISHED;
+      where.publishedAt = { lte: new Date() };
     }
 
     if (query.category) where.categoryId = query.category;
@@ -292,6 +304,10 @@ class ArticleService {
 
   // Delete article
   async deleteArticle(articleId, userId, userRole) {
+    if (userRole === USER_ROLES.EDITORIAL) {
+      throw new AppError('You do not have permission to delete articles', 403);
+    }
+
     const article = await prisma.article.findUnique({ where: { id: articleId } });
 
     if (!article) {

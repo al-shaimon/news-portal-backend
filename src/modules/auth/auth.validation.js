@@ -21,6 +21,9 @@ export const registerValidation = [
     .withMessage('Password is required')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters'),
+
+  // Prevent privilege escalation: users cannot choose roles during public registration
+  body('role').not().exists().withMessage('Role cannot be set during registration'),
 ];
 
 export const loginValidation = [
@@ -46,6 +49,13 @@ export const changePasswordValidation = [
 ];
 
 export const updateProfileValidation = [
+  body('email')
+    .optional()
+    .trim()
+    .isEmail()
+    .withMessage('Please provide a valid email')
+    .normalizeEmail(),
+
   body('name')
     .optional()
     .trim()

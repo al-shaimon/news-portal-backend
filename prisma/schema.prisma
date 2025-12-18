@@ -10,8 +10,7 @@ datasource db {
 enum UserRole {
   super_admin
   admin
-  journalist
-  reader
+  editorial
 }
 
 enum ArticleStatus {
@@ -48,7 +47,7 @@ model User {
   name            String
   email           String          @unique
   password        String
-  role            UserRole        @default(reader)
+  role            UserRole        @default(editorial)
   avatar          String?
   phone           String?
   bio             String?
