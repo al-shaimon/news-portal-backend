@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import connectDB, { prisma } from '../../config/database.js';
 import { USER_ROLES } from '../../config/constants.js';
 
@@ -14,26 +13,23 @@ const seedAdmin = async () => {
 
     const isProduction = process.env.NODE_ENV === 'production';
 
-    const generatePassword = () => crypto.randomBytes(24).toString('base64url');
+    const DEFAULT_PASSWORD = '123456';
 
     const ensureUserForRole = async ({ role, envPrefix, defaultName, defaultEmail }) => {
       const existing = await prisma.user.findFirst({ where: { role } });
+      const password = DEFAULT_PASSWORD;
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       if (existing) {
-        return { role, email: existing.email, password: null, created: false };
+        const updated = await prisma.user.update({
+          where: { id: existing.id },
+          data: { password: hashedPassword },
+        });
+        return { role: updated.role, email: updated.email, password, created: false, reset: true };
       }
 
       const name = process.env[`${envPrefix}_NAME`] || defaultName;
       const email = process.env[`${envPrefix}_EMAIL`] || defaultEmail;
-      const passwordFromEnv = process.env[`${envPrefix}_PASSWORD`];
-
-      if (isProduction && !passwordFromEnv) {
-        throw new Error(
-          `Missing ${envPrefix}_PASSWORD. Refusing to seed privileged accounts in production without explicit passwords.`
-        );
-      }
-
-      const password = passwordFromEnv || generatePassword();
-      const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await prisma.user.create({
         data: {
@@ -78,13 +74,13 @@ const seedAdmin = async () => {
     console.log('✅ Seed users summary');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     seededUsers.forEach((u) => {
-      const status = u.created ? 'created' : 'exists';
+      const status = u.created ? 'created' : 'updated';
       console.log(`👤 ${u.role} (${status})`);
       console.log(`📧 Email: ${u.email}`);
-      if (!isProduction && u.password) {
+      if (isProduction) {
+        console.log('🔑 Password: (hidden in production)');
+      } else {
         console.log(`🔑 Password: ${u.password}`);
-      } else if (isProduction) {
-        console.log('🔑 Password: (set via env)');
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
