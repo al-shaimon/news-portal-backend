@@ -5,6 +5,10 @@ UPDATE "User" SET "isActive" = false WHERE "role" = 'reader';
 
 CREATE TYPE "UserRole_new" AS ENUM ('super_admin', 'admin', 'editorial');
 
+-- Drop the existing default (e.g. 'reader') before changing enum type; otherwise Postgres
+-- fails because it can't implicitly cast the column default to the new enum.
+ALTER TABLE "User" ALTER COLUMN "role" DROP DEFAULT;
+
 ALTER TABLE "User"
 ALTER COLUMN "role" TYPE "UserRole_new"
 USING (
@@ -20,4 +24,3 @@ ALTER TABLE "User" ALTER COLUMN "role" SET DEFAULT 'editorial';
 ALTER TYPE "UserRole" RENAME TO "UserRole_old";
 ALTER TYPE "UserRole_new" RENAME TO "UserRole";
 DROP TYPE "UserRole_old";
-
