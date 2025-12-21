@@ -10,9 +10,9 @@ services:
       - backend-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U news_portal_user -d news_portal"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
   app:
     build: .
@@ -25,15 +25,10 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - backend-db
+      backend-db:
+        condition: service_healthy
     command: >
-      sh -c "
-      until pg_isready -h backend-db -U news_portal_user -d news_portal; do
-        echo 'Waiting for Postgres...'; sleep 2;
-      done;
-      npx prisma migrate deploy &&
-      node src/server.js
-      "
+      sh -c "npx prisma migrate deploy && node src/server.js"
 
 volumes:
   backend-postgres-data:
