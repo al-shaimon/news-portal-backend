@@ -1,7 +1,6 @@
 services:
   backend-db:
     image: postgres:15-alpine
-    container_name: newsportal-backend-db
     restart: always
     environment:
       POSTGRES_USER: news_portal_user
@@ -10,36 +9,31 @@ services:
     volumes:
       - backend-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U news_portal_user -d news_portal']
+      test: ["CMD-SHELL", "pg_isready -U news_portal_user -d news_portal"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    networks:
-      - newsportal-backend-net
+      retries: 10
 
   app:
     build: .
     restart: always
-    depends_on:
-      backend-db:
-        condition: service_healthy
     env_file:
       - .env
     environment:
-      # Use the explicit container_name so DNS resolution is guaranteed even if Docker doesn't create the service alias
-      DATABASE_URL: postgresql://news_portal_user:d123@newsportal-backend-db:5432/news_portal?schema=public
+      DATABASE_URL: postgresql://news_portal_user:d123@backend-db:5432/news_portal?schema=public
       NODE_ENV: production
     ports:
-      - '5000:5000'
+      - "5000:5000"
+    depends_on:
+      - backend-db
     command: >
-      sh -c "npx prisma migrate deploy && node src/server.js"
-    networks:
-      - newsportal-backend-net
+      sh -c "
+      until pg_isready -h backend-db -U news_portal_user -d news_portal; do
+        echo 'Waiting for Postgres...'; sleep 2;
+      done;
+      npx prisma migrate deploy &&
+      node src/server.js
+      "
 
 volumes:
   backend-postgres-data:
-
-networks:
-  newsportal-backend-net:
-    driver: bridge
-    attachable: true
