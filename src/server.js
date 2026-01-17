@@ -41,7 +41,7 @@ app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
-  })
+  }),
 );
 app.use(mongoSanitize()); // Sanitize data against NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
@@ -93,7 +93,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Rate limiting
-app.use('/api', rateLimiter);
+// app.use('/api', rateLimiter);
 
 // Health check route
 app.get('/health', (req, res) => {
